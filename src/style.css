@@ -1,0 +1,10 @@
+* { box-sizing: border-box; }
+html, body, #app { height: 100%; margin: 0; }
+body {
+  font-family: "Microsoft YaHei UI", system-ui, sans-serif;
+  color: #e5e7eb;
+  background: radial-gradient(120% 120% at 50% 0%, #1e293b 0%, #0b1120 60%);
+  overflow: hidden;
+}
+::-webkit-scrollbar { width: 8px; height: 8px; }
+::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
