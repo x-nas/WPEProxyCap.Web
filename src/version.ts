@@ -13,7 +13,7 @@
 export const MIN_CLIENT_VERSION = '1.0.1'
 
 /** 客户端下载地址（拦截提示里的「下载最新版本」按钮打开）。TODO：换成真实下载页。 */
-export const CLIENT_DOWNLOAD_URL = 'https://www.wpe64.com'
+export const CLIENT_DOWNLOAD_URL = 'https://www.wpe64.com/downloads.html'
 
 /** 比较版本号 a、b（"主.次.修订"）：a<b 返回 -1，a>b 返回 1，相等返回 0。缺失段按 0 处理。 */
 export function compareVersion(a: string, b: string): number {
