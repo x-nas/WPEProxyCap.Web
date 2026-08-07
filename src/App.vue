@@ -9,6 +9,7 @@ import ControlCenter from './components/ControlCenter.vue'
 import SubscriberModal from './components/SubscriberModal.vue'
 import LogModal from './components/LogModal.vue'
 import VerifyModal from './components/VerifyModal.vue'
+import { CLIENT_DOWNLOAD_URL, isClientOutdated } from './version'
 
 // 与主界面 slate 配色对齐：让所有弹窗(Modal/Input/Button/Table/Result 等)统一继承主界面色调，
 // 避免 darkAlgorithm 默认中性深灰与主界面蓝灰调不搭
@@ -53,6 +54,11 @@ const hideOpen = ref(false)
 
 // 隐藏窗口：关闭界面但保留代理（对应原程序 bHide_Click，StopMihomo=false）
 function confirmHide() { hideOpen.value = false; api.hideWindow() }
+
+// 版本门槛：当前 C# 客户端版本(getState().version)低于本前端要求的最低版本时，
+// 弹阻断式遮罩要求更新（state 未加载时不拦截）
+const clientOutdated = computed(() => isClientOutdated(state.value?.version))
+function downloadNewClient() { api.openExternal(CLIENT_DOWNLOAD_URL) }
 
 const clock = ref('')
 let clockTimer: number | undefined
@@ -214,6 +220,19 @@ const agreementLines = computed(() =>
           </div>
         </div>
       </div>
+
+      <!-- 版本门槛：客户端版本过低时的阻断遮罩（盖住整个界面，必须更新后才能用） -->
+      <div v-if="clientOutdated" class="update-overlay">
+        <div class="update-box">
+          <svg class="update-ic" viewBox="0 0 24 24" width="52" height="52"><path fill="currentColor" d="M13,14H11V9H13M13,18H11V16H13M1,21H23L12,2L1,21Z"/></svg>
+          <h2 class="update-title">需要更新客户端</h2>
+          <p class="update-desc">当前客户端 <b>V{{ state?.version }}</b> 版本过低，请更新到最新版本使用。</p>
+          <div class="update-actions">
+            <button class="ubtn ubtn-ghost" @click="api.closeWindow()">退出</button>
+            <button class="ubtn ubtn-primary" @click="downloadNewClient">下载最新版本</button>
+          </div>
+        </div>
+      </div>
     </div>
   </a-config-provider>
 </template>
@@ -292,4 +311,26 @@ const agreementLines = computed(() =>
 .hbtn-ghost:hover { background: #475569; }
 .hbtn-primary { background: #0ea5e9; }
 .hbtn-primary:hover { background: #38bdf8; }
+
+/* 版本门槛阻断遮罩（z-index 高于标题栏，盖住整个窗口） */
+.update-overlay {
+  position: fixed; inset: 0; z-index: 9999;
+  background: rgba(15, 23, 42, 0.92); -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+}
+.update-box {
+  width: 460px; background: #1e293b; border-radius: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
+  padding: 32px; text-align: center;
+}
+.update-ic { display: block; margin: 0 auto 16px; color: #fbbf24; }
+.update-title { margin: 0 0 8px; font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; color: #fff; }
+.update-desc { margin: 0 0 24px; font-size: 0.875rem; line-height: 1.7; color: #94a3b8; }
+.update-desc b { color: #e2e8f0; font-weight: 600; }
+.update-actions { display: flex; gap: 12px; }
+.ubtn { flex: 1; padding: 12px 0; border: none; border-radius: 12px; cursor: pointer; font-size: 1rem; font-weight: 500; color: #fff; transition: background .2s; }
+.ubtn-ghost { background: #334155; }
+.ubtn-ghost:hover { background: #475569; }
+.ubtn-primary { background: #0ea5e9; }
+.ubtn-primary:hover { background: #38bdf8; }
 </style>
