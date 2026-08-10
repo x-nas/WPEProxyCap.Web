@@ -13,16 +13,24 @@ watch(() => props.open, (v) => { if (v) input.value = props.subscriberName ?? ''
 
 async function update() {
   const name = input.value.trim()
-  if (!name) return
+  // ① 订阅号为空
+  if (!name) {
+    message.warning('请输入订阅号')
+    return
+  }
   busy.value = true
   try {
-    const ok = await api.setSubscriber(name)
-    if (ok) {
+    const r = await api.setSubscriber(name)
+    if (r === 'ok') {
       message.success('更新订阅成功，已自动保存订阅地址')
       emit('updated')
       emit('update:open', false)
+    } else if (r === 'network') {
+      // ② 无法连接订阅服务器
+      message.error('无法连接订阅服务器')
     } else {
-      message.error('更新订阅失败，请检查订阅地址是否正确')
+      // ③ 订阅号不存在或已过期（invalid / empty 兜底）
+      message.error('订阅号不存在或已过期')
     }
   } finally {
     busy.value = false

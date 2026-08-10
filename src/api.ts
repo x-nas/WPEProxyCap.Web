@@ -62,7 +62,9 @@ export const api = {
   getOsVersion: () => call<string>('getOsVersion'),
   readAgreement: (type: 'UserAgreement' | 'PrivacyPolicy') => call<string>('readAgreement', { type }),
 
-  setSubscriber: (name: string) => call<boolean>('setSubscriber', { name }),
+  // 返回状态码：'ok'=成功 | 'empty'=订阅号为空 | 'network'=无法连接订阅服务器 | 'invalid'=订阅号不存在或已过期
+  setSubscriber: (name: string) =>
+    call<'ok' | 'empty' | 'network' | 'invalid'>('setSubscriber', { name }),
   updateAccount: (username: string, password: string, remember: boolean) => call<boolean>('updateAccount', { username, password, remember }),
   selectServer: (serverId: string) => call<boolean>('selectServer', { serverId }),
   connect: (username: string, password: string) => call<boolean>('connect', { username, password }),
