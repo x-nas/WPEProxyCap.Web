@@ -174,9 +174,9 @@
 
         var SEL = {
           set: '.titlebar .wb.gear',
-          sub: '.titlebar .wb.sub',
+          sub: '.subbtn',   // 订阅设置在右侧 SUBSCRIPTION 舱底部，标题栏上没有这颗
           log: '.titlebar .wb:not(.gear):not(.sub):not(.pin):not(.close)',
-          verify: '.modebar .tb',
+          verify: '.ab:not(.danger)',   // 控制中心右侧 SECURITY 舱的「立即安全验证」
         }[want]
 
         if (!SEL) { console.warn('[probe:auto] 未知 auto', want); return }
@@ -190,6 +190,8 @@
             el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
             el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
             el.click()
+            // 弹窗会把焦点给第一个可聚焦元素（右上角 ×），键盘焦点那条路会弹出悬停提示压在图上 —— 截图前摘掉焦点
+            setTimeout(function () { if (document.activeElement) document.activeElement.blur() }, 150)
             window.__autoDone = true
             return
           }

@@ -22,27 +22,33 @@ const progress = ref('')
 const resultText = ref('')
 
 let offProgress: (() => void) | null = null
+// 每次打开记一个序号：验证还没回来就关掉再打开时，上一轮的结果不能写到这一轮的界面上
+let runId = 0
 
 watch(() => props.open, async (v) => {
-  if (!v) { offProgress?.(); offProgress = null; return }
+  offProgress?.()
+  offProgress = null
+  const id = ++runId
+  if (!v) return
 
   // 每次打开重跑一次验证（对应原程序 VerifyForm_Load）
   phase.value = 'running'
   progress.value = t('vf.wait')
   resultText.value = ''
 
-  offProgress = on('verifyProgress', (s: string) => (progress.value = s))
+  offProgress = on('verifyProgress', (s: string) => { if (id === runId) progress.value = s })
 
   try {
     const r = await api.verifyProxy()
+    if (id !== runId) return
     resultText.value = r.error
     phase.value = r.success ? 'success' : 'fail'
   } catch (e) {
+    if (id !== runId) return
     resultText.value = e instanceof Error ? e.message : String(e)
     phase.value = 'fail'
   } finally {
-    offProgress?.()
-    offProgress = null
+    if (id === runId) { offProgress?.(); offProgress = null }
   }
 })
 

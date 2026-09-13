@@ -15,7 +15,6 @@ const OK_VALUE = /^(var\(--fs-(caption|label|small|dense|body|lead|title|num|num
 const ALLOW = [
   ['App.vue', /^\.bname$/, '标题栏品牌字（与 WPE 同一条例外）'],
   ['components/ControlCenter.vue', /^\.clock$/, '反应堆核心里的计时表，整屏主视觉'],
-  ['reset.css', /./, '第三方全局 reset（ant-design-vue 4.2.6 原样搬来），不属于本项目的字号层级'],
 ]
 
 function walk(d, out) {

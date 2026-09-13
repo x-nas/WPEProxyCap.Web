@@ -1,17 +1,12 @@
 <script setup lang="ts">
 /*
-  确认框 —— 全项目一份（退出程序 / 隐藏界面 / 断开连接都走它）。
+  确认框 —— 全项目一份（目前只有控制中心的「断开连接」在用）。
 
   改造前这三处各画了一个 overlay + box（圆角 16px、蓝色主按钮、slate 配色），
   长得一样却是三份代码，而且与这套赛博皮肤完全不搭。收成一个之后，
   它与 CyberModal 是同一套语言：方角、发丝边、四角标记、Orbitron 青色标题。
 
-  【等级色】按 level 换色：
-    danger  破坏性的（断开连接 / 退出程序）—— 红
-    warning 会有后果但能撤（隐藏界面）—— 琥珀
-    info    单纯问一句 —— 青
-
-  ⚠️ <b>焦点默认落在「取消」上</b>：这几个确认框里有断开连接、退出程序这类
+  ⚠️ <b>焦点默认落在「取消」上</b>：断开连接是
   不可撤销的操作，回车不该直接把它做掉。
   ⚠️ <b>不在弹窗上绑 Enter = 确定</b>：焦点在「取消」上时按 Enter 会同时触发按钮的
   click 和弹窗的 keydown，两条路一起走到同一个出口，谁先谁后决定答案。
@@ -28,8 +23,7 @@ const props = withDefaults(defineProps<{
   /** 确定键的文案。默认「确定」 */
   okText?: string
   cancelText?: string
-  level?: 'danger' | 'warning' | 'info'
-}>(), { message: '', level: 'danger' })
+}>(), { message: '' })
 
 const emit = defineEmits<{
   (e: 'update:open', v: boolean): void
@@ -51,14 +45,12 @@ const { covered } = useModal(() => props.open)
 </script>
 
 <template>
-  <Teleport to="body"><div v-if="props.open" class="mask" :class="props.level" :inert="covered" @keydown.esc="close">
+  <Teleport to="body"><div v-if="props.open" class="mask" :inert="covered" @keydown.esc="close">
     <div class="box" role="alertdialog" aria-modal="true">
       <span class="mk tl" /><span class="mk tr" /><span class="mk bl" /><span class="mk br" />
 
       <svg class="ic" viewBox="0 0 24 24">
-        <template v-if="props.level === 'info'"><circle cx="12" cy="12" r="9" /><path d="M12 11v5M12 8h.01" /></template>
-        <template v-else-if="props.level === 'warning'"><path d="M12 3l9 16H3z" /><path d="M12 9v4M12 16h.01" /></template>
-        <template v-else><circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6M9 9l6 6" /></template>
+        <circle cx="12" cy="12" r="9" /><path d="M15 9l-6 6M9 9l6 6" />
       </svg>
 
       <h2 class="tt">{{ props.title }}</h2>
@@ -82,13 +74,11 @@ const { covered } = useModal(() => props.open)
   display: flex;
   align-items: center;
   justify-content: center;
-  /* 等级色由这一层往下传，box 里的件全走 currentColor / var(--lv) */
+  /* 强调色由这一层往下传，box 里的件全走 var(--lv) */
   --lv: var(--danger);
   --lv-rgb: var(--danger-rgb);
 }
 
-.mask.warning { --lv: var(--amber); --lv-rgb: var(--amber-rgb); }
-.mask.info { --lv: var(--cyan); --lv-rgb: var(--cyan-rgb); }
 
 .box {
   position: relative;
@@ -154,7 +144,7 @@ const { covered } = useModal(() => props.open)
 
 .b:hover { border-color: var(--cyan); color: var(--cyan); }
 
-/* 确定键跟着等级色走：破坏性的那一下该看得出来是破坏性的 */
+/* 确定键是红的：破坏性的那一下该看得出来是破坏性的 */
 .b.go { border-color: rgb(var(--lv-rgb) / 45%); color: var(--lv); }
 .b.go:hover { background: rgb(var(--lv-rgb) / 12%); border-color: var(--lv); color: var(--lv); }
 .b.go:focus-visible { outline-color: var(--lv); }

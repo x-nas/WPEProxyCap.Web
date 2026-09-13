@@ -31,13 +31,25 @@ if (webview) {
   })
 }
 
+/**
+ * 一次调用最多等多久。最慢的是连接与安全验证（各自内部 5s 超时、串起来十几秒），
+ * 60s 远在其上 —— 这道兜底只为「C# 那边异常没回应答」时别让调用方永远挂着。
+ */
+const CALL_TIMEOUT_MS = 60_000
+
 export function call<T = any>(method: string, args: Record<string, unknown> = {}): Promise<T> {
   // 仅在 WebView2 宿主内运行；非宿主环境（如普通浏览器）不支持桥调用。
   if (!webview) return Promise.reject(new Error(`[bridge] 缺少 WebView2 宿主，无法调用 ${method}`))
 
   const id = `r${++seq}`
   return new Promise<T>((resolve, reject) => {
-    pending.set(id, { resolve, reject })
+    const timer = setTimeout(() => {
+      if (pending.delete(id)) reject(new Error(`[bridge] ${method} 超时`))
+    }, CALL_TIMEOUT_MS)
+    pending.set(id, {
+      resolve: (v) => { clearTimeout(timer); resolve(v) },
+      reject: (e) => { clearTimeout(timer); reject(e) },
+    })
     webview.postMessage({ id, method, args })
   })
 }

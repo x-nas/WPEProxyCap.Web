@@ -173,7 +173,6 @@ async function confirmDisconnect(): Promise<void> {
 
     <CyberConfirm
       v-model:open="disconnectOpen"
-      level="danger"
       :title="t('cc.cutAsk')"
       :message="t('cc.cutDesc')"
       :ok-text="t('cc.cutOk')"

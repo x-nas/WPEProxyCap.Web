@@ -51,9 +51,7 @@ export const DICT = {
 
   // ── 主页：登录卡 ───────────────────────────────────────
   'home.welcome': { zh: '欢迎回来', en: 'Welcome Back' },
-  'home.welcomeSub': { zh: '选择你的战场，立即开始征程', en: 'Pick your battlefield and jump right in' },
   'home.server': { zh: '选择服务器', en: 'Server' },
-  'home.serverPh': { zh: '请选择服务器', en: 'Select a server' },
   'home.noServer': { zh: '暂无服务器', en: 'No servers' },
   'home.account': { zh: '通行证账号', en: 'Account' },
   'home.accountPh': { zh: '请输入您的账号', en: 'Enter your account' },
@@ -66,13 +64,9 @@ export const DICT = {
   'home.register': { zh: '立即注册', en: 'Sign up' },
 
   // ── 控制中心 ───────────────────────────────────────────
-  'cc.title': { zh: '玩家控制中心', en: 'Control Center' },
-  'cc.sub': { zh: '管理你的在线状态、连接与安全验证', en: 'Session, connection and security at a glance' },
   'cc.connected': { zh: '已连接', en: 'Connected' },
   'cc.disconnected': { zh: '已断开', en: 'Disconnected' },
-  'cc.node': { zh: '节点', en: 'Node' },
   'cc.session': { zh: '本次游戏在线时长', en: 'Session Time' },
-  'cc.hms': { zh: '小时 : 分钟 : 秒', en: 'hours : minutes : seconds' },
   'cc.pause': { zh: '暂停计时', en: 'Pause timer' },
   'cc.resume': { zh: '继续计时', en: 'Resume timer' },
   'cc.paused': { zh: '计时已暂停', en: 'Timer paused' },
@@ -81,8 +75,6 @@ export const DICT = {
   'cc.today': { zh: '今日累计在线', en: 'Online today' },
   'cc.hour': { zh: '小时', en: 'h' },
   'cc.minute': { zh: '分钟', en: 'min' },
-  'cc.link': { zh: '当前连接状态', en: 'Connection' },
-  'cc.server': { zh: '服务器', en: 'Server' },
   'cc.delay': { zh: '网络延迟', en: 'Latency' },
   'cc.memory': { zh: '内存占用', en: 'Memory' },
   'cc.speed': { zh: '实时网速', en: 'Throughput' },
@@ -90,7 +82,6 @@ export const DICT = {
   'cc.down': { zh: '下行', en: 'Down' },
   'cc.offline': { zh: '不在线', en: 'Offline' },
   'cc.netOps': { zh: '联网操作', en: 'Connection' },
-  'cc.cutTitle': { zh: '立即断开代理服务器', en: 'Disconnect the proxy' },
   'cc.cutDesc': { zh: '断开后将退出当前代理连接，未保存进度可能会丢失，请谨慎操作。', en: 'Disconnecting ends the proxy session; unsaved game progress may be lost.' },
   'cc.cut': { zh: '立即断开连接', en: 'Disconnect' },
   'cc.cutAsk': { zh: '确认断开连接？', en: 'Disconnect now?' },

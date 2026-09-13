@@ -15,7 +15,7 @@
   控制中心上的一个动作，回到主页时后台确实什么都没跑。
 */
 import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
-import { call, inHost, on } from './bridge'
+import { inHost, on } from './bridge'
 import { api, type AppState, type ServerInfo, type NoticeInfo, type LiveStats, type LogItem } from './api'
 import { defOf, lang, t, isEn, type Key } from './i18n'
 import { initLang } from './i18n'
@@ -74,12 +74,16 @@ const NET: Record<string, { k: Key; c: string }> = {
 const net = computed(() => NET[wpeStatus.value] ?? { k: 'win.net.checking' as Key, c: 'm' })
 
 async function refreshAll(): Promise<void> {
-  state.value = await api.getState()
-  connected.value = state.value.isConnected
-  wpeStatus.value = await api.checkWpeServer()
-  subDelay.value = await api.checkSubscriberServer()
-  servers.value = await api.getServers()
-  notices.value = await api.getNotices()
+  try {
+    state.value = await api.getState()
+    connected.value = state.value.isConnected
+    wpeStatus.value = await api.checkWpeServer()
+    subDelay.value = await api.checkSubscriberServer()
+    servers.value = await api.getServers()
+    notices.value = await api.getNotices()
+  } catch (e) {
+    console.error('[app] 刷新订阅数据失败', e)
+  }
 }
 
 onMounted(async () => {

@@ -48,14 +48,15 @@ watch(() => props.state, (s) => {
 }, { immediate: true })
 
 /*
-  有节点则默认选中第一个。订阅更新后服务器列表会被换成新订阅的节点：
-  当前选中仍在新列表中 → 保持不变；否则自动选中第一个并同步后端；无节点 → 清空。
+  有节点则默认选中第一个。订阅更新 / 刷新后服务器列表会整份换掉：
+  当前选中仍在新列表中 → 保持；否则选中第一个；无节点 → 清空。
+  ⚠️ 两种情况都要把选择<b>再报给后端一次</b>：后端每次取列表都会重算选中项，
+  只在「换了一个」时才同步的话，两边可能一个指着 A、一个指着 B（节点 Id 按地址 + 名称算，刷新前后稳定）。
 */
 watch(() => props.servers, (list) => {
-  if (list.some((s) => s.serverId === selectedId.value)) return
-  const first = list[0]
-  if (first) { selectedId.value = first.serverId; api.selectServer(first.serverId) }
-  else selectedId.value = ''
+  const keep = list.find((s) => s.serverId === selectedId.value) ?? list[0]
+  selectedId.value = keep?.serverId ?? ''
+  if (keep) api.selectServer(keep.serverId).catch(() => {})
 }, { immediate: true })
 
 const selectedServer = computed(() => props.servers.find((s) => s.serverId === selectedId.value) ?? null)
@@ -74,7 +75,7 @@ function toggleRemember(): void {
 async function chooseServer(id: string): Promise<void> {
   if (busy.value) return
   selectedId.value = id
-  await api.selectServer(id)
+  await api.selectServer(id).catch(() => {})
 }
 
 async function login(): Promise<void> {
@@ -84,6 +85,8 @@ async function login(): Promise<void> {
   try {
     const ok = await api.connect(username.value.trim(), password.value.trim())
     if (!ok) pushToast('error', t('msg.loginFail'))
+  } catch {
+    pushToast('error', t('msg.loginFail'))
   } finally { busy.value = false }
 }
 
