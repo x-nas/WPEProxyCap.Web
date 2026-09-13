@@ -1,93 +1,116 @@
 <script setup lang="ts">
+/*
+  订阅设置。
+
+  【订阅号的口径，界面上必须说清】
+  订阅号<b>只能由订阅服务器签发</b>，客户端与 WPE x64 都无法自行创建；
+  而且<b>服务器地址也只能经订阅号取得</b> —— 没有订阅号连不上。
+  这两句写在下面那条提示里（`sub.hint`），与官网 wpc.html 是同一套说法。
+
+  ⚠️⚠️ <b>「不用订阅号也能连 —— 手填服务器地址即可」是错的，2026-09-12 已改掉。</b>
+  那句话从官网抄过来，而它在<b>这个客户端上从来不成立</b>：
+  `AppConfig.SubscriberIP` / `SubscriberPort` 全项目<b>只有一处写入</b>
+  （`ProxyService.SetSubscriberAsync`，从订阅服务器的应答里取），界面上没有任何入口能手填；
+  没有订阅号时 `GetServerListAsync` 连请求都不发、`_servers` 留空，
+  服务器下拉就是「暂无服务器」。账号密码确实是手填的（主页那两个框），
+  但那两件事被那句话混成了一件。
+
+  改造前它是 a-modal + a-input，这一轮换成自绘的 CyberModal + .inp ——
+  顺带把 ant-design-vue 整个依赖去掉了。
+*/
 import { ref, watch } from 'vue'
-import { message } from 'ant-design-vue'
 import { api } from '../api'
+import { t } from '../i18n'
+import { pushToast } from '../stores/toast'
+import CyberModal from './CyberModal.vue'
 
 const props = defineProps<{ open: boolean; subscriberName: string | null; subscriberTime: string | null }>()
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void; (e: 'updated'): void }>()
 
 const input = ref('')
 const busy = ref(false)
+const err = ref('')
 
-watch(() => props.open, (v) => { if (v) input.value = props.subscriberName ?? '' })
+watch(() => props.open, (v) => {
+  if (!v) return
+  input.value = props.subscriberName ?? ''
+  err.value = ''
+})
 
-async function update() {
+async function update(): Promise<void> {
   const name = input.value.trim()
-  // ① 订阅号为空
-  if (!name) {
-    message.warning('请输入订阅号')
-    return
-  }
+  err.value = ''
+
+  // ① 订阅号为空 —— 不发请求，直接在页脚说清楚
+  if (!name) { err.value = t('sub.empty'); return }
+
   busy.value = true
+
   try {
     const r = await api.setSubscriber(name)
+
     if (r === 'ok') {
-      message.success('更新订阅成功，已自动保存订阅地址')
+      pushToast('success', t('sub.ok'))
       emit('updated')
       emit('update:open', false)
-    } else if (r === 'network') {
-      // ② 无法连接订阅服务器
-      message.error('无法连接订阅服务器')
-    } else {
-      // ③ 订阅号不存在或已过期（invalid / empty 兜底）
-      message.error('订阅号不存在或已过期')
+      return
     }
+
+    /*
+      ⚠️ 两种失败<b>要分开说</b>，它们的下一步动作不一样：
+        network → 网络断了 / 服务器没起来，用户该去查网络；
+        invalid → 号不对或过期，用户该去找发号的人。
+      混成一句「更新失败」等于什么都没说。
+    */
+    err.value = r === 'network' ? t('sub.netErr') : t('sub.invalid')
+  } catch (e) {
+    err.value = e instanceof Error ? e.message : String(e)
   } finally {
     busy.value = false
   }
 }
-
-function close() { emit('update:open', false) }
 </script>
 
 <template>
-  <a-modal :open="open" title="订阅设置" :footer="null" centered :width="400"
-           wrap-class-name="sub-modal-wrap" @update:open="emit('update:open', $event)">
-    <div class="sub-body">
-      <div class="sub-meta">
-        <div>当前订阅：{{ subscriberName || '未配置订阅地址' }}</div>
-        <div class="sub-time">更新时间：{{ subscriberTime || '从未更新' }}</div>
-      </div>
-      <a-input v-model:value="input" placeholder="请输入订阅号" allow-clear @press-enter="update" />
-      <div class="sub-actions">
-        <button class="sub-btn sub-exit" @click="close">退出</button>
-        <button class="sub-btn sub-update" :disabled="busy" @click="update">
-          <svg class="sub-btn-ic" viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M17.65,6.35C16.2,4.9 14.21,4 12,4A8,8 0 0,0 4,12A8,8 0 0,0 12,20C15.73,20 18.84,17.45 19.73,14H17.65C16.83,16.33 14.61,18 12,18A6,6 0 0,1 6,12A6,6 0 0,1 12,6C13.66,6 15.14,6.69 16.22,7.78L13,11H20V4L17.65,6.35Z"/></svg>
-          {{ busy ? '更新中…' : '更新订阅' }}
-        </button>
-      </div>
+  <CyberModal
+    :open="props.open"
+    :title="t('sub.title')"
+    subtitle="Subscription"
+    :busy="busy"
+    :error="err"
+    :width="520"
+    :save-text="busy ? t('sub.updating') : t('sub.update')"
+    :cancel-text="t('dlg.exit')"
+    @update:open="emit('update:open', $event)"
+    @save="update"
+  >
+    <div class="setf">
+      <section class="sec">
+        <div class="grp">{{ t('sub.title') }}</div>
+
+        <div class="row">
+          <span class="k">{{ t('sub.current') }}</span>
+          <b class="v" :class="{ none: !props.subscriberName }">{{ props.subscriberName || t('sub.none') }}</b>
+        </div>
+
+        <div class="row">
+          <span class="k">{{ t('sub.time') }}</span>
+          <b class="v dim">{{ props.subscriberTime || t('sub.never') }}</b>
+        </div>
+
+        <div class="row">
+          <span class="k">ID</span>
+          <input class="inp" v-model="input" :placeholder="t('sub.ph')" :disabled="busy" @keyup.enter="update" />
+        </div>
+
+        <p class="hint">{{ t('sub.hint') }}</p>
+      </section>
     </div>
-  </a-modal>
+  </CyberModal>
 </template>
 
 <style scoped>
-.sub-body { display: flex; flex-direction: column; gap: 14px; padding-top: 6px; }
-.sub-meta { font-size: 13px; color: #94a3b8; line-height: 1.8; }
-.sub-time { font-size: 12px; }
-
-/* 底部按钮行：退出(深色·较窄) + 更新订阅(蓝色·较宽·带图标) */
-.sub-actions { display: flex; gap: 14px; margin-top: 4px; }
-.sub-btn {
-  flex: 1; height: 44px; border: none; border-radius: 10px; cursor: pointer;
-  font-size: 15px; font-weight: 600; display: inline-flex; align-items: center;
-  justify-content: center; gap: 8px; transition: all .18s;
-}
-.sub-btn-ic { flex-shrink: 0; }
-.sub-exit { background: #334155; color: #e2e8f0; }
-.sub-exit:hover { background: #3f4d63; }
-.sub-update { background: #0ea5e9; color: #fff; box-shadow: 0 8px 20px rgba(14,165,233,.28); }
-.sub-update:hover:not(:disabled) { background: #38bdf8; }
-.sub-update:active:not(:disabled), .sub-exit:active { transform: scale(.97); }
-.sub-update:disabled { opacity: .7; cursor: default; }
-</style>
-
-<!-- 弹窗 teleport 到 body，scoped 够不到，用 wrapClassName 定位做全局覆盖 -->
-<style>
-/* 标题颜色与主界面左上角软件名(.bname #38bdf8)一致 */
-.sub-modal-wrap .ant-modal-title { color: #38bdf8; }
-/* 订阅号输入框高度对齐主页输入框(.input 48px)，圆角/字号一并对齐 */
-.sub-modal-wrap .ant-input-affix-wrapper,
-.sub-modal-wrap .ant-input { height: 48px; border-radius: 12px; font-size: 16px; }
-.sub-modal-wrap .ant-input-affix-wrapper { padding-top: 0; padding-bottom: 0; }
-.sub-modal-wrap .ant-input-affix-wrapper .ant-input { height: auto; border-radius: 0; }
+.v { flex: 1; min-width: 0; font-weight: 400; font-size: var(--fs-body); color: var(--gray); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.v.none { color: var(--dim); }
+.v.dim { color: var(--dim2); }
 </style>

@@ -1,0 +1,201 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" href="data:," />
+    <title>WPE Proxy Cap · dev probe</title>
+  </head>
+  <body>
+    <!--
+      ════════════════════════════════════════════════════════════════
+      开发探针页 —— 带一个<b>假宿主</b>，让整个界面能在普通浏览器里跑起来。
+
+      用法：`npm run dev` 之后开 http://localhost:5173/dev-probe.html
+        ?view=home     主页（默认）
+        ?view=cc       控制中心（已连接）
+        ?theme=light   浅色
+        ?lang=en       语言（zh | tw | en | ja | ko | vi | ru）
+        ?empty=1       公告与节点都为空（验空态）
+
+      【为什么需要它】bridge.ts 在模块顶层读 window.chrome.webview，
+      普通浏览器里拿不到 → 所有 call 都 reject，界面只剩一句「要在 WPC 里打开」。
+      有了假宿主就能逐屏看样式、量对比度、切七种语言看溢出 —— 这些事没有它做不了。
+
+      ⚠️ <b>它不会进发布包</b>：Vite 默认只把 index.html 当入口，
+      根目录下别的 .html 不会被打包（除非写进 rollupOptions.input）。
+      改构建配置时记得别把它带上。
+
+      ⚠️ 假应答要<b>覆盖会走不同分支的取值</b>：这里的公告故意给了五种类型、
+      有的带「更多」有的不带，节点给了三个（含一个名字很长的），
+      延迟给了会触发三档配色的值。造假数据时问一句「它会不会让某个分支永远走不到」。
+      ════════════════════════════════════════════════════════════════
+    -->
+    <div id="app"></div>
+
+    <script>
+      (function () {
+        var q = new URLSearchParams(location.search)
+        var view = q.get('view') || 'home'
+        var empty = q.get('empty') === '1'
+
+        var NOTICES = empty ? [] : [
+          { noticeType: 1, noticeTitle: '双倍经验周末活动开启', noticeContent: '本周末 00:00 起至周日 23:59，所有加速节点全程双倍经验。\n\n参与方式：\n  · 使用任意节点连接并保持在线\n  · 累计在线满 2 小时可额外领取一次补给\n\n活动期间节点负载较高，若遇到延迟波动请切换到就近节点。', noticeMore: 'https://www.wpe64.com/', noticeTime: '2026-09-11T10:00:00' },
+          { noticeType: 2, noticeTitle: '华东二区节点例行维护公告', noticeContent: '2026-09-13 02:00 - 04:00 期间，华东二区节点将进行例行维护，期间该节点不可用。\n请提前切换至华东一区或华南一区。', noticeMore: '', noticeTime: '2026-09-10T18:30:00' },
+          { noticeType: 3, noticeTitle: '秋季城市赛报名开启', noticeContent: '面向全部订阅用户开放，报名截止 9 月 20 日。', noticeMore: 'https://www.wpe64.com/', noticeTime: '2026-09-09T09:00:00' },
+          { noticeType: 4, noticeTitle: '限时商城上新：加速时长礼包', noticeContent: '限时七天，售完即止。', noticeMore: '', noticeTime: '2026-09-08T12:00:00' },
+          { noticeType: 5, noticeTitle: '玩家社区月度精选', noticeContent: '本月最受欢迎的十篇实战贴已整理上线。', noticeMore: 'https://www.wpe64.com/', noticeTime: '2026-09-07T20:15:00' },
+        ]
+
+        var SERVERS = empty ? [] : [
+          { serverId: 's1', serverName: '华东一区 · 上海 BGP', serverIP: '10.172.190.252', serverPort: 1080, forgotURL: 'www.wpe64.com/forgot', registerURL: 'www.wpe64.com/reg', verifyURL: 'https://www.wpe64.com/' },
+          { serverId: 's2', serverName: '华南一区 · 广州电信', serverIP: '10.172.190.253', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '' },
+          { serverId: 's3', serverName: '亚太专线 · 新加坡（高级会员专属通道）', serverIP: '10.172.190.254', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '' },
+        ]
+
+        var STATE = {
+          version: '1.0.1',
+          isConnected: view === 'cc',
+          subscriberName: empty ? '' : 'WPC-2026-0912-DEMO',
+          subscriberTime: empty ? null : '2026-09-12 08:40:11',
+          selectedServerId: empty ? null : 's1',
+          userName: empty ? '' : 'player_001',
+          password: empty ? '' : 'secret123',
+          rememberAccount: true,
+          language: q.get('lang') || 'zh-CN',
+          themeMode: q.get('theme') || 'dark',
+          isDark: (q.get('theme') || 'dark') !== 'light',
+          scanLine: q.get('scan') !== 'off',
+        }
+
+        var listeners = []
+
+        function emit(name, data) {
+          listeners.forEach(function (fn) { fn({ data: { type: 'event', name: name, data: data } }) })
+        }
+
+        var HANDLERS = {
+          getState: function () { return STATE },
+          checkWpeServer: function () { return empty ? 'offline' : 'online' },
+          checkSubscriberServer: function () { return empty ? -1 : 38 },
+          getServers: function () { return SERVERS },
+          getNotices: function () { return NOTICES },
+          getMihomoVersion: function () { return 'v1.19.2' },
+          getOsVersion: function () { return 'Microsoft Windows 10 Pro 10.0.19045 (64 位)' },
+          readAgreement: function () {
+            return '一、服务说明\n  WPE Proxy Cap（以下简称"本软件"）是一款面向网络游戏的链路加速工具。\n\n二、使用规范\n  用户应在所在地区法律允许的范围内使用本软件。\n\n三、免责声明\n  本软件按"现状"提供，作者不对使用过程中产生的任何损失承担责任。\n\n© 2026 Winsock Packet Editor'
+          },
+          setSubscriber: function (a) { return String(a.name).indexOf('WPC-') === 0 ? 'ok' : 'invalid' },
+          updateAccount: function () { return true },
+          selectServer: function (a) { STATE.selectedServerId = a.serverId; return true },
+          connect: function () {
+            STATE.isConnected = true
+            setTimeout(function () { emit('connected', STATE) }, 700)
+            return true
+          },
+          disconnect: function () { STATE.isConnected = false; emit('disconnected', null); return true },
+          verifyProxy: function () { return { success: true, error: '代理服务器正常，账号密码验证通过' } },
+          pauseOnlineTime: function () { return true },
+          resumeOnlineTime: function () { return true },
+          openExternal: function (a) { console.log('[probe] openExternal', a.url); return true },
+          closeWindow: function () { console.log('[probe] closeWindow'); return true },
+          minimizeWindow: function () { return true },
+          startDragWindow: function () { return true },
+          setTopMost: function (a) { return { topMost: !!a.on } },
+          setLanguage: function (a) { STATE.language = a.language; return true },
+          setAppearance: function (a) {
+            if (a.mode !== undefined) STATE.themeMode = a.mode
+            if (a.isDark !== undefined) STATE.isDark = a.isDark
+            if (a.scan !== undefined) STATE.scanLine = a.scan
+            return true
+          },
+        }
+
+        window.chrome = window.chrome || {}
+        window.chrome.webview = {
+          addEventListener: function (_t, fn) { listeners.push(fn) },
+          postMessage: function (msg) {
+            var fn = HANDLERS[msg.method]
+            var resp
+            if (!fn) resp = { type: 'result', id: msg.id, ok: false, error: '[probe] 未知方法: ' + msg.method }
+            else {
+              try { resp = { type: 'result', id: msg.id, ok: true, result: fn(msg.args || {}) } }
+              catch (e) { resp = { type: 'result', id: msg.id, ok: false, error: String(e) } }
+            }
+            // 异步回，与真桥一致 —— 同步回会让「先注册监听再发请求」那条顺序失效
+            setTimeout(function () { listeners.forEach(function (l) { l({ data: resp }) }) }, 0)
+          },
+        }
+
+        // 连上之后每秒推一次实时数据（延迟故意在三档配色之间来回走）
+        var t = 0
+        setInterval(function () {
+          if (!STATE.isConnected) return
+          t++
+          var h = Math.floor(t / 3600), m = Math.floor((t % 3600) / 60), s = t % 60
+          var p = function (n) { return String(n).padStart(2, '0') }
+          emit('stats', {
+            upKBps: 42.7 + (t % 7) * 3.1,
+            downKBps: 318.4 + (t % 11) * 12.5,
+            memoryMB: 96 + (t % 5),
+            delayMs: [37, 58, 121, 204][Math.floor(t / 6) % 4],
+            onlineTime: p(h) + ':' + p(m) + ':' + p(s),
+            todayOnlineSeconds: 4520 + t,
+            healthProgress: Math.min(1, (4520 + t) / 10800),
+          })
+        }, 1000)
+
+        // 灌几条日志，让日志弹窗四种等级都验得到
+        setTimeout(function () {
+          emit('log', { type: 0, logTime: new Date().toISOString(), logName: 'System', logContent: '配置文件已生成：config.yaml' })
+          emit('log', { type: 3, logTime: new Date().toISOString(), logName: 'Mihomo', logContent: 'API 内核 v1.19.2' })
+          emit('log', { type: 1, logTime: new Date().toISOString(), logName: 'Network', logContent: '订阅服务器响应较慢（1284 ms）' })
+          emit('log', { type: 2, logTime: new Date().toISOString(), logName: 'Proxy', logContent: 'SOCKS5 握手失败：远程主机强迫关闭了一个现有的连接' })
+        }, 300)
+      })()
+    </script>
+
+    <script type="module" src="/src/main.ts"></script>
+
+    <script>
+      /*
+        ?auto=… —— 挂载之后自动打开某个弹窗，给官网教程截图用。
+          auto=set   软件设置      auto=sub   订阅设置
+          auto=log   系统日志      auto=verify 安全验证（要配 view=cc）
+
+        ⚠️ <b>用 setTimeout 轮询，不要用 requestAnimationFrame。</b>
+        rAF 只在页面真的在出帧时才派发：无头截图 / 面板被挡住时它一次都不会来，
+        整条链会卡在第一步，表现成「截出来的图停在第一屏」且不报错
+        （WPE 那边的探针实测栽过，查了一圈才找到）。
+      */
+      (function () {
+        var want = new URLSearchParams(location.search).get('auto')
+        if (!want) return
+
+        var SEL = {
+          set: '.titlebar .wb.gear',
+          sub: '.titlebar .wb.sub',
+          log: '.titlebar .wb:not(.gear):not(.sub):not(.pin):not(.close)',
+          verify: '.modebar .tb',
+        }[want]
+
+        if (!SEL) { console.warn('[probe:auto] 未知 auto', want); return }
+
+        var tries = 0
+        var timer = setInterval(function () {
+          var el = document.querySelector(SEL)
+          if (el) {
+            clearInterval(timer)
+            // 三件事一起派：标题栏那几颗按钮有「没有配对 mousedown 的 click 一律丢掉」的防线
+            el.dispatchEvent(new MouseEvent('mousedown', { bubbles: true, button: 0 }))
+            el.dispatchEvent(new MouseEvent('mouseup', { bubbles: true, button: 0 }))
+            el.click()
+            window.__autoDone = true
+            return
+          }
+          if (++tries > 60) { clearInterval(timer); console.warn('[probe:auto] 等不到', SEL) }
+        }, 50)
+      })()
+    </script>
+  </body>
+</html>

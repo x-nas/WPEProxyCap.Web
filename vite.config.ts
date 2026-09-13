@@ -1,19 +1,13 @@
 import { defineConfig } from 'vite'
 import vue from '@vitejs/plugin-vue'
-import Components from 'unplugin-vue-components/vite'
-import { AntDesignVueResolver } from 'unplugin-vue-components/resolvers'
 
 // 构建产物直接输出到 C# 项目的 wwwroot，随 Release 打包。
 // base 用相对路径，配合 WebView2 的 https://app.wpeproxycap.local/ 虚拟主机加载。
+//
+// ⚠️ 2026-09-12 去掉了 unplugin-vue-components + AntDesignVueResolver ——
+// 界面已全部自绘，一个 antd 组件都不用了。
 export default defineConfig({
-  plugins: [
-    vue(),
-    // ant-design-vue 按需自动引入（v4 用 cssinjs，运行时注入样式，故 importStyle:false）
-    Components({
-      resolvers: [AntDesignVueResolver({ importStyle: false, resolveIcons: true })],
-      dts: false,
-    }),
-  ],
+  plugins: [vue()],
   base: './',
   build: {
     outDir: '../App/wwwroot',

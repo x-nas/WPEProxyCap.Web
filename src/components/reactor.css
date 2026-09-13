@@ -1,0 +1,128 @@
+/*
+  方案 A · REACTOR 的骨架 —— MainView 与 ControlCenter <b>共用这一份</b>
+  （两屏骨架一致是这个方案的立意，抄两份迟早抄歪）。
+  两个组件在 <style scoped> 里 @import 它，所以规则照样带 scoped 属性。
+
+  ⚠️ 类名刻意避开 style.css 里已有的全局件（.st / .mini / .row / .btn / .tb）——
+  同名不同物在 WPE 那边栽过五次。
+*/
+
+.reactor {
+  flex: 1;
+  min-height: 0;
+  position: relative;
+  z-index: 10;
+  display: grid;
+  grid-template-columns: 270px minmax(0, 1fr) 270px;
+  grid-template-rows: minmax(0, 1fr) 150px;
+  gap: 12px;
+  padding: 12px;
+}
+
+@media (max-width: 1000px) { .reactor { grid-template-columns: 230px minmax(0, 1fr) 230px; } }
+@media (max-height: 640px) { .reactor { grid-template-rows: minmax(0, 1fr) 118px; } }
+
+/* 再窄就改成纵向滚动：核心一个像素都不缩到读不了 */
+@media (max-width: 820px) {
+  .reactor { grid-template-columns: 1fr; grid-template-rows: auto; overflow-y: auto; }
+  .reactor .center { order: -1; }
+  .reactor .stage { height: 280px; flex: none; }
+  .reactor .band { height: 180px; }
+}
+
+.bay {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px 16px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  overflow-y: auto;
+  --bk: var(--cyan);
+  --bk-rgb: var(--cyan-rgb);
+}
+
+.bay.auth { --bk: var(--green); --bk-rgb: var(--green-rgb); }
+.bay.sub { --bk: var(--magenta); --bk-rgb: var(--magenta-rgb); }
+
+.bay .mk { position: absolute; width: 9px; height: 9px; border: 1px solid rgb(var(--bk-rgb) / 50%); pointer-events: none; }
+.bay .mk.a { top: 6px; left: 6px; border-right: 0; border-bottom: 0; }
+.bay .mk.b { top: 6px; right: 6px; border-left: 0; border-bottom: 0; }
+
+.bh {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  margin-bottom: 2px;
+  font-family: var(--share);
+  font-size: var(--fs-label);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--bk);
+  white-space: nowrap;
+}
+
+.bh i { flex: none; width: 6px; height: 6px; background: var(--bk); box-shadow: 0 0 6px var(--bk); }
+.bh em { position: relative; top: .5px; font-style: normal; color: var(--dim2); letter-spacing: .06em; overflow: hidden; text-overflow: ellipsis; }   /* 与左边的大写标识排一行，100% 缩放实测偏高 1.4px（2026-09-13） */
+
+.grow { flex: 1; min-height: 6px; }
+
+.center {
+  min-width: 0;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  background: radial-gradient(circle at 50% 56%, rgb(var(--green-rgb) / 7%), transparent 62%);
+}
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 0;
+}
+
+.hint {
+  flex: none;
+  font-family: var(--share);
+  font-size: var(--fs-caption);
+  letter-spacing: .16em;
+  text-transform: uppercase;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.hint span { color: var(--border2); }
+
+.band { grid-column: 1 / -1; }
+
+.kvs { display: flex; flex-direction: column; }
+
+.kv {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 10px;
+  padding: 7px 0;
+  border-bottom: 1px dashed var(--border);
+  font-size: var(--fs-small);
+}
+
+.kv .k { flex: none; font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+.kv .v { min-width: 0; color: var(--gray); text-align: right; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.kv .v.num { font-family: var(--orbit); }
+.kv .v.g { color: var(--green); }
+.kv .v.a { color: var(--amber); }
+.kv .v.o { color: var(--acc-orange); }
+.kv .v.m { color: var(--muted); }
+.kv .v.d { color: var(--danger); }

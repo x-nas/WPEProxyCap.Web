@@ -8,6 +8,15 @@ const pending = new Map<string, Pending>()
 const listeners = new Map<string, Set<(data: any) => void>>()
 let seq = 0
 
+/**
+ * 在不在 WebView2 宿主里。
+ *
+ * 普通浏览器里打开（调试前端样式时）拿不到 window.chrome.webview，
+ * 这时所有 call 都会 reject —— 界面该<b>显式说清楚</b>而不是到处弹「调用失败」。
+ * App.vue 用它出一句提示，与 WPE 的 bridge/index.ts 同一条口径。
+ */
+export const inHost = !!webview
+
 if (webview) {
   webview.addEventListener('message', (e: MessageEvent) => {
     const msg = e.data

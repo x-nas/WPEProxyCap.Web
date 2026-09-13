@@ -1,4 +1,8 @@
 // 类型化的桥接封装：把 bridge.call() 包成语义方法，组件里直接用。
+//
+// ⚠️ 语言与主题<b>不走这里</b>：它们各自在 i18n.ts / stores/theme.ts 里直接 call
+// （'setLanguage' / 'setAppearance'），与 WPE x64 同一条路数 —— 那两个模块自带
+// 「先改本地、再推 C#、失败只是这次没记住」的语义，包一层反而把它藏起来了。
 import { call } from './bridge'
 
 export interface ServerInfo {
@@ -38,6 +42,19 @@ export interface AppState {
   userName: string | null
   password: string | null
   rememberAccount: boolean
+
+  // ── 界面偏好（2026-09-12 加）──────────────────────────────
+  // 与 WPE x64 的 getSystemCheck 同一条口径：<b>跟着首屏那一次往返一起带回来</b>，
+  // 不为它们单开一次 getPrefs —— 语言与主题必须在<b>任何像素画出来之前</b>定好，
+  // 否则英文用户会先看见一帧中文、浅色用户会先闪一下深色。
+  /** BCP-47 文化名，如 zh-CN / en-US。认不出来的由前端 normalize 回简体 */
+  language: string
+  /** 用户选的那一档：dark | light | system */
+  themeMode: string
+  /** 解析后的实际主题。跟随系统时存的是上次解析出来的值 */
+  isDark: boolean
+  /** 氛围层那条游走亮带开不开 */
+  scanLine: boolean
 }
 
 export interface LogItem {
@@ -75,6 +92,15 @@ export const api = {
   openExternal: (url: string) => call<boolean>('openExternal', { url }),
   closeWindow: () => call<boolean>('closeWindow'),
   minimizeWindow: () => call<boolean>('minimizeWindow'),
+  toggleMaximize: () => call<{ maximized: boolean }>('toggleMaximize'),
   startDragWindow: () => call<boolean>('startDragWindow'),
-  hideWindow: () => call<boolean>('hideWindow'),   // 隐藏界面但保留代理
+
+  /**
+   * 窗口保持最前。
+   *
+   * ⚠️ <b>状态以 C# 回的为准</b>，不是本地先翻再发：置顶是 Windows 说了算的，
+   * 极少数情况下（全屏独占的程序）设了也不生效，那时按钮该照实显示。
+   * 同样<b>不落盘</b> —— 它是个运行期的窗体属性，重启回到不置顶。
+   */
+  setTopMost: (on: boolean) => call<{ topMost: boolean }>('setTopMost', { on }),
 }

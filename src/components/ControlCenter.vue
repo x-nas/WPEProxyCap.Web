@@ -1,218 +1,326 @@
 <script setup lang="ts">
-import { ref, computed } from 'vue'
-import { api, type LiveStats } from '../api'
+/*
+  控制中心（方案 A · REACTOR，2026-09-13 整屏重做）—— 与主页<b>同一副骨架</b>：
+    左 TELEMETRY  上 / 下行速率 + 迷你曲线 + 内核内存
+    中 CORE       连接铭牌（节点 + 延迟分档）+ 核心计时表（圆弧 = 今日进度）+ 暂停
+    右 ACTIONS    安全验证 / 断开连接（带确认）
+    底 INTEL      公告照样看得到
 
-const props = defineProps<{ stats: LiveStats | null; serverName: string }>()
-const emit = defineEmits<{ (e: 'verify'): void }>()
+  暂停：2026-09-13 起<b>整个核心就是按钮</b>（方案 C），点六边形任意位置暂停 / 继续；
+  悬停时六边形底色变亮、描边加粗，下方提示转成当前色；暂停后整环转琥珀、数字慢闪。
+*/
+import { computed, ref, watch } from 'vue'
+import { api, type LiveStats, type NoticeInfo } from '../api'
+import { t } from '../i18n'
+import CyberConfirm from './CyberConfirm.vue'
+import ReactorCore from './ReactorCore.vue'
+import IntelBand from './IntelBand.vue'
+import Sparkline from './Sparkline.vue'
+
+const props = defineProps<{ stats: LiveStats | null; serverName: string; notices: NoticeInfo[] }>()
+
+const emit = defineEmits<{ (e: 'verify'): void; (e: 'disconnected'): void }>()
 
 const paused = ref(false)
+const pauseBusy = ref(false)   // 桥调用在途时挡住连点，免得前端状态与 C# 那边对不上
 const disconnectOpen = ref(false)
+const busy = ref(false)
+
+/* 曲线的点前端自己攒：每次 stats 推一个，封顶 60 —— 不需要新的桥方法 */
+const HIST = 60
+const upHist = ref<number[]>([])
+const downHist = ref<number[]>([])
+
+watch(() => props.stats, (s) => {
+  if (!s) return
+  upHist.value = [...upHist.value, s.upKBps].slice(-HIST)
+  downHist.value = [...downHist.value, s.downKBps].slice(-HIST)
+})
 
 const delayText = computed(() => {
   const d = props.stats?.delayMs
-  return d == null || d < 0 ? '不在线' : `${d} ms`
+  return d == null || d < 0 ? t('cc.offline') : `${d} ms`
 })
-const upText = computed(() => (props.stats?.upKBps ?? 0).toFixed(1))
-const downText = computed(() => (props.stats?.downKBps ?? 0).toFixed(1))
+
+/** 延迟分档：≤80 绿 · ≤160 琥珀 · 更高或不通红 */
+const delayTone = computed(() => {
+  const d = props.stats?.delayMs
+  if (d == null || d < 0) return 'd'
+  if (d <= 80) return 'g'
+  return d <= 160 ? 'a' : 'd'
+})
+
+const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+const upText = computed(() => fmt(props.stats?.upKBps ?? 0))
+const downText = computed(() => fmt(props.stats?.downKBps ?? 0))
+const memText = computed(() => String(Math.round(props.stats?.memoryMB ?? 0)))
+
 const todayText = computed(() => {
   const s = props.stats?.todayOnlineSeconds ?? 0
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
-  if (h && m) return `今日累计在线：${h} 小时 ${m} 分钟`
-  if (h) return `今日累计在线：${h} 小时`
-  if (m) return `今日累计在线：${m} 分钟`
-  return '今日累计在线：0 分钟'
+  const h = Math.floor(s / 3600)
+  const m = Math.floor((s % 3600) / 60)
+  if (h && m) return `${h} ${t('cc.hour')} ${m} ${t('cc.minute')}`
+  if (h) return `${h} ${t('cc.hour')}`
+  return `${m} ${t('cc.minute')}`
 })
-const healthPct = computed(() => Math.max(0, Math.min(100, Math.round((props.stats?.healthProgress ?? 0) * 100))))
 
-async function togglePause() {
-  if (paused.value) { await api.resumeOnlineTime(); paused.value = false }
-  else { await api.pauseOnlineTime(); paused.value = true }
+const health = computed(() => Math.max(0, Math.min(1, props.stats?.healthProgress ?? 0)))
+const healthPct = computed(() => Math.round(health.value * 100))
+
+async function togglePause(): Promise<void> {
+  if (pauseBusy.value) return
+  pauseBusy.value = true
+  try {
+    if (paused.value) { await api.resumeOnlineTime(); paused.value = false }
+    else { await api.pauseOnlineTime(); paused.value = true }
+  } finally { pauseBusy.value = false }
 }
 
-function confirmDisconnect() {
-  disconnectOpen.value = false
-  api.disconnect()
+async function confirmDisconnect(): Promise<void> {
+  busy.value = true
+  try {
+    await api.disconnect()
+    /*
+      ⚠️ 主动报一次「断开了」而不是只等 C# 推 `disconnected` 事件：
+      事件万一没到（桥断了、窗口正在关），界面会一直卡在控制中心而后台其实已经停了。
+      事件到了也无妨，App 那边幂等。
+    */
+    emit('disconnected')
+  } finally { busy.value = false }
 }
 </script>
 
 <template>
-  <div class="cc">
-    <div class="cc-inner">
-      <!-- 页面标题 -->
-      <div class="page-head">
-        <h1 class="page-title">
-          <svg class="pt-ic" viewBox="0 0 24 24" width="30" height="30"><path fill="currentColor" d="M12,19.2C9.5,19.2 7.29,17.92 6,15.98C6.03,13.99 10,12.9 12,12.9C13.99,12.9 17.97,13.99 18,15.98C16.71,17.92 14.5,19.2 12,19.2M12,5A3,3 0 0,1 15,8A3,3 0 0,1 12,11A3,3 0 0,1 9,8A3,3 0 0,1 12,5M12,2A10,10 0 0,0 2,12A10,10 0 0,0 12,22A10,10 0 0,0 22,12A10,10 0 0,0 12,2Z"/></svg>
-          玩家控制中心
-        </h1>
-        <p class="page-sub">管理你的在线状态、连接与安全验证</p>
+  <div class="reactor">
+    <!-- ── 左舱：遥测 ─────────────────────────────── -->
+    <section class="bay tele">
+      <span class="mk a" /><span class="mk b" />
+      <div class="bh"><i />TELEMETRY <em>// {{ t('cc.speed') }}</em></div>
+
+      <div class="rd">
+        <div class="rk">{{ t('cc.up') }} · KB/s</div>
+        <div class="rv">{{ upText }}</div>
+        <Sparkline :values="upHist" tone="green" />
       </div>
 
-      <!-- 第一行：在线时长 + 连接状态 -->
-      <div class="row row-top">
-        <div class="stat-card glass-panel card-time">
-          <div class="ct-head">
-            <div>
-              <p class="card-label">本次游戏在线时长</p>
-              <h2 class="clock">{{ stats?.onlineTime ?? '00:00:00' }}</h2>
-              <p class="clock-sub">小时 : 分钟 : 秒</p>
-            </div>
-            <div class="toggle-btn" :class="{ paused }" @click="togglePause" :title="paused ? '继续计时' : '暂停计时'">
-              <svg v-if="!paused" viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M14,19H18V5H14M6,19H10V5H6V19Z"/></svg>
-              <svg v-else viewBox="0 0 24 24" width="24" height="24"><path fill="currentColor" d="M8,5.14V19.14L19,12.14L8,5.14Z"/></svg>
-            </div>
-          </div>
-          <div class="bar-track"><div class="bar-fill" :style="{ width: healthPct + '%' }" /></div>
-          <p class="bar-sub">{{ todayText }}</p>
-        </div>
-
-        <div class="stat-card glass-panel card-conn">
-          <p class="card-label conn-label">当前连接状态</p>
-          <div class="conn-list">
-            <div class="conn-row"><span>服务器</span><span class="v-ok">{{ serverName || '—' }}</span></div>
-            <div class="conn-row"><span>网络延迟</span><span class="v-strong">{{ delayText }}</span></div>
-            <div class="conn-row"><span>内存占用</span><span class="v-strong">{{ stats?.memoryMB ?? 0 }} MB</span></div>
-            <div class="conn-row"><span>实时网速</span><span class="v-strong">↑ {{ upText }} KB/s · ↓ {{ downText }} KB/s</span></div>
-          </div>
-        </div>
+      <div class="rd">
+        <div class="rk">{{ t('cc.down') }} · KB/s</div>
+        <div class="rv c">{{ downText }}</div>
+        <Sparkline :values="downHist" tone="cyan" />
       </div>
 
-      <!-- 第二行：危险操作 + 安全中心 -->
-      <div class="row row-actions">
-        <div class="stat-card glass-panel">
-          <p class="card-label danger act-label">联网操作</p>
-          <h3 class="card-h3">立即断开代理服务器</h3>
-          <p class="card-desc">断开后将退出当前代理连接，未保存进度可能会丢失，请谨慎操作。</p>
-          <button class="btn lift btn-danger" @click="disconnectOpen = true">
-            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13V3Z"/></svg>
-            立即断开连接
-          </button>
-        </div>
+      <div class="grow" />
 
-        <div class="stat-card glass-panel">
-          <p class="card-label sky act-label">安全中心</p>
-          <h3 class="card-h3">账号安全验证</h3>
-          <p class="card-desc">可验证代理服务器的连接状态，以及输入的账号密码是否正确。</p>
-          <button class="btn lift btn-sky" @click="emit('verify')">
-            <svg viewBox="0 0 24 24" width="18" height="18"><path fill="currentColor" d="M12,1L3,5V11C3,16.55 6.84,21.74 12,23C17.16,21.74 21,16.55 21,11V5L12,1M10,17L6,13L7.41,11.59L10,14.17L16.59,7.58L18,9L10,17Z"/></svg>
-            立即安全验证
-          </button>
-        </div>
-      </div>
-    </div>
+      <div class="kv last"><span class="k">{{ t('cc.memory') }}</span><span class="v num mem">{{ memText }} MB</span></div>
+    </section>
 
-    <!-- 断开确认弹窗 -->
-    <div v-if="disconnectOpen" class="modal-overlay" @click.self="disconnectOpen = false">
-      <div class="modal-box">
-        <svg class="mb-ic danger" viewBox="0 0 24 24" width="48" height="48"><path fill="currentColor" d="M16.56,5.44L15.11,6.89C16.84,7.94 18,9.83 18,12A6,6 0 0,1 12,18A6,6 0 0,1 6,12C6,9.83 7.16,7.94 8.88,6.88L7.44,5.44C5.36,6.88 4,9.28 4,12A8,8 0 0,0 12,20A8,8 0 0,0 20,12C20,9.28 18.64,6.88 16.56,5.44M13,3H11V13H13V3Z"/></svg>
-        <h2 class="mb-title">确认断开连接？</h2>
-        <p class="mb-desc">断开后将退出当前代理连接，未保存进度可能会丢失。</p>
-        <div class="mb-actions">
-          <button class="btn btn-ghost" @click="disconnectOpen = false">取消</button>
-          <button class="btn btn-danger" @click="confirmDisconnect">确认断开</button>
-        </div>
+    <!-- ── 中舱：铭牌 + 计时核心 ───────────────────── -->
+    <section class="center">
+      <div class="plate">
+        <span class="led" />
+        <span class="pst">{{ t('cc.connected') }}</span>
+        <span class="pn" :title="serverName">{{ serverName || '—' }}</span>
+        <span class="pk">{{ t('cc.delay') }}</span>
+        <span class="pd" :class="delayTone">{{ delayText }}</span>
       </div>
-    </div>
+
+      <div class="stage">
+        <!--
+          2026-09-13 方案 C：整个核心就是暂停 / 继续键，与主页的连接按钮（MainView 的 .engage）同一种交互。
+          原来六边形里那颗 28px 的小方键去掉了。「今日累计在线」在环下面的 ARC 那行。
+        -->
+        <button class="core-btn" :class="{ paused }" :aria-pressed="paused"
+                :aria-label="t(paused ? 'cc.resume' : 'cc.pause')" :disabled="pauseBusy" @click="togglePause">
+          <ReactorCore :tone="paused ? 'paused' : 'on'" :progress="health">
+            <span class="k">{{ t('cc.session') }}</span>
+            <span class="clock" :class="{ paused }">{{ stats?.onlineTime ?? '00:00:00' }}</span>
+            <span class="tap">
+              <svg v-if="!paused" viewBox="0 0 10 10" aria-hidden="true"><rect x="2.4" y="1" width="1.8" height="8" /><rect x="5.8" y="1" width="1.8" height="8" /></svg>
+              <svg v-else viewBox="0 0 10 10" aria-hidden="true"><path d="M2.6 1.2l5.6 3.8-5.6 3.8z" /></svg>
+              {{ t(paused ? 'cc.tapResume' : 'cc.tapPause') }}
+            </span>
+          </ReactorCore>
+        </button>
+      </div>
+
+      <div class="hint">
+        <template v-if="paused"><b class="pz">{{ t('cc.paused') }}</b><span class="sep">//</span></template>
+        ARC = {{ t('cc.today') }} <b class="td">{{ todayText }} · {{ healthPct }}%</b>
+      </div>
+    </section>
+
+    <!-- ── 右舱：动作 ─────────────────────────────── -->
+    <section class="bay acts">
+      <span class="mk a" /><span class="mk b" />
+      <div class="bh"><i />SECURITY <em>// {{ t('cc.secCenter') }}</em></div>
+      <p class="ds">{{ t('cc.vfDesc') }}</p>
+      <button class="ab" @click="emit('verify')">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.4-3.3 8.2-8 9-4.7-.8-8-4.6-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
+        {{ t('cc.vf') }}
+      </button>
+
+      <div class="grow" />
+
+      <div class="bh cut"><i />LINK <em>// {{ t('cc.netOps') }}</em></div>
+      <p class="ds">{{ t('cc.cutDesc') }}</p>
+      <button class="ab danger" :disabled="busy" @click="disconnectOpen = true">
+        <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v9" /><path d="M7.3 6.3a8 8 0 1 0 9.4 0" /></svg>
+        {{ t('cc.cut') }}
+      </button>
+    </section>
+
+    <IntelBand class="band" :notices="notices" />
+
+    <CyberConfirm
+      v-model:open="disconnectOpen"
+      level="danger"
+      :title="t('cc.cutAsk')"
+      :message="t('cc.cutDesc')"
+      :ok-text="t('cc.cutOk')"
+      @confirm="confirmDisconnect" />
   </div>
 </template>
 
+<style scoped src="./reactor.css"></style>
+
 <style scoped>
-/* 外层：对应参考 HTML 的 p-8(32px)；内容 max-w-5xl(1024px) 居中 */
-.cc { flex: 1; overflow-y: auto; z-index: 10; padding: 32px; }
-.cc-inner { max-width: 1024px; margin: 0 auto; }
 
-.glass-panel {
-  background: rgba(15, 23, 42, 0.7);
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+/* ── 遥测 ─────────────────────────────── */
+.rd { display: flex; flex-direction: column; gap: 2px; }
+.rk { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.rv { font-family: var(--orbit); font-size: var(--fs-num-lg); line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--gray); }
+.rv.c { color: var(--cyan); }
+.kv.last { border-bottom: 0; }
+.mem { color: var(--amber) !important; }
+
+/* ── 铭牌 ─────────────────────────────── */
+.plate {
+  flex: none;
+  width: 100%;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 14px;
+  border: 1px solid rgb(var(--green-rgb) / 45%);
+  background: linear-gradient(90deg, rgb(var(--green-rgb) / 8%), transparent 60%), var(--card);
+  font-size: var(--fs-body);
 }
-/* rounded-xl 12px / p-6 24px / stat-card hover */
-.stat-card {
-  border-radius: 12px; padding: 24px;
-  transition: transform 0.3s ease, box-shadow 0.3s ease;
+
+.led { flex: none; width: 8px; height: 8px; background: var(--green); box-shadow: 0 0 8px var(--green); }
+/* 2026-09-13 按要求：四段一律同一个字号（--fs-body），不再靠 top 逐段补 —— 字号不一样时各段的墨迹高度不同，怎么补看着都不齐 */
+.pst { flex: none; font-family: var(--share); font-size: var(--fs-body); letter-spacing: .12em; text-transform: uppercase; color: var(--green); }
+.pn { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--gray); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.pk { flex: none; font-family: var(--share); font-size: var(--fs-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+.pd { flex: none; font-family: var(--orbit); font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
+.pd.g { color: var(--green); }
+.pd.a { color: var(--amber); }
+.pd.d { color: var(--danger); }
+
+/* ── 核心计时 ─────────────────────────── */
+.stage .k { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+
+/*
+  ⚠️ 字号规范里<b>唯一的例外</b>（与 WPE 启动页的 62px 机位号丝印同一类：整屏的主视觉，不是正文）。
+  九级里最大的 --fs-num-lg 只有 22px，放进 300px 的圆环里撑不起「核心计时表」。
+  写定值不写 clamp(…vw)：圆环跟窗口<b>高度</b>缩放，按宽度算的字号会与环对不上。
+  白名单在 tools/check-font-sizes.mjs。
+*/
+.clock {
+  font-family: var(--orbit);
+  font-weight: 900;
+  font-size: 30px;
+  line-height: 1.15;
+  letter-spacing: .04em;
+  font-variant-numeric: tabular-nums;
+  color: var(--green);
+  text-shadow: 0 0 22px rgb(var(--green-rgb) / 40%);
 }
-.stat-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 20px -8px rgba(56, 189, 248, 0.15);
+
+.clock.paused { color: var(--amber); text-shadow: 0 0 22px rgb(var(--amber-rgb) / 35%); }
+
+/*
+  整个核心就是暂停键（方案 C）—— 写法照主页的 .engage：透明圆形按钮包住 ReactorCore。
+  ⚠️ 焦点环画在内侧（outline-offset 负值）：圆环外面就是舱位边界，正偏移会被裁掉一截。
+*/
+.core-btn {
+  height: 100%;
+  max-width: 100%;
+  aspect-ratio: 1;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 50%;
+  color: inherit;
+  font-family: inherit;
+  cursor: pointer;
 }
 
-/* 页面标题（mb-8=32px） */
-.page-head { margin-bottom: 32px; }
-.page-title { display: flex; align-items: center; gap: 12px; margin: 0 0 8px; font-size: 1.875rem; line-height: 2.25rem; font-weight: 700; color: #fff; }
-.pt-ic { color: #38bdf8; display: block; }
-.page-sub { margin: 0; color: #94a3b8; font-size: 1rem; }
+.core-btn:disabled { cursor: progress; }
+.core-btn:focus-visible { outline: 2px solid var(--green); outline-offset: -8px; }
+.core-btn.paused:focus-visible { outline-color: var(--amber); }
+.core-btn :deep(.hex) { transition: fill .2s, stroke-width .2s; }
+.core-btn:hover :deep(.hex) { fill: rgb(var(--rc-rgb) / 14%); stroke-width: 2.2; }
 
-/* 行布局（gap-6=24px / mb-8=32px） */
-.row { display: grid; gap: 24px; margin-bottom: 32px; }
-.row-top { grid-template-columns: 2fr 1fr; }
-.row-actions { grid-template-columns: 1fr 1fr; }
-.row-actions { margin-bottom: 0; }
-
-/* 卡片标签 text-xs uppercase tracking-wider font-semibold slate-400 */
-.card-label { margin: 0; font-size: 0.75rem; line-height: 1rem; letter-spacing: 0.05em; text-transform: uppercase; font-weight: 600; color: #94a3b8; }
-.card-label.danger { color: #f87171; }
-.card-label.sky { color: #38bdf8; }
-.conn-label { margin-bottom: 16px; }   /* mb-4 */
-.act-label { margin-bottom: 12px; }    /* mb-3 */
-
-/* 在线时长卡片 */
-.ct-head { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 16px; }
-.clock { margin: 8px 0 0; font-size: 2.25rem; line-height: 2.5rem; font-weight: 700; color: #fff; }
-.clock-sub { margin: 4px 0 0; font-size: 0.875rem; color: #94a3b8; }
-.toggle-btn {
-  width: 48px; height: 48px; border-radius: 50%; cursor: pointer; flex-shrink: 0;
-  display: flex; align-items: center; justify-content: center;
-  color: #38bdf8; background: rgba(56, 189, 248, 0.2); transition: all .25s;
+/* 核心里的提示：平时是暗的说明，悬停转成当前色（绿 / 琥珀），暂停时常亮琥珀 */
+.tap {
+  margin-top: 8px;
+  max-width: 100%;   /* 六边形内宽只有 ~197px：长语言兜底截断，文案已尽量收短 */
+  overflow: hidden;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--share);
+  font-size: var(--fs-caption);
+  line-height: 1;
+  letter-spacing: .14em;
+  color: var(--muted);
+  white-space: nowrap;
+  transition: color .2s;
 }
-.toggle-btn.paused { color: #fbbf24; background: rgba(245, 158, 11, 0.2); }
-/* 进度条 h-1.5=6px / slate-800/50 / sky-500 fill */
-.bar-track { width: 100%; height: 6px; border-radius: 9999px; background: rgba(30, 41, 59, 0.5); overflow: hidden; }
-.bar-fill { height: 100%; border-radius: 9999px; background: #0ea5e9; box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3); transition: width .4s ease; }
-.bar-sub { margin: 8px 0 0; font-size: 0.75rem; color: #64748b; }   /* text-xs slate-500 mt-2 */
 
-/* 连接状态卡片（space-y-4=16px / text-sm） */
-.conn-list { display: flex; flex-direction: column; gap: 16px; }
-.conn-row { display: flex; align-items: center; justify-content: space-between; font-size: 0.875rem; }
-.conn-row > span:first-child { color: #e2e8f0; }
-.v-ok { color: #34d399; font-weight: 500; }
-.v-strong { color: #fff; font-weight: 500; }
-.v-speed { color: #34d399; font-weight: 500; }
+.tap svg { width: 9px; height: 9px; fill: currentColor; }
+.core-btn:hover .tap { color: var(--green); }
+.core-btn.paused .tap { color: var(--amber); }
 
-/* 危险 / 安全 卡片 */
-.card-h3 { margin: 0 0 16px; font-size: 1.125rem; line-height: 1.75rem; font-weight: 600; color: #fff; }
-.card-desc { margin: 0 0 24px; font-size: 0.875rem; line-height: 1.5; color: #94a3b8; }
+/* 暂停后数字慢闪，一眼看出「这个数现在不动」 */
+.clock.paused { animation: cc-blink 1.4s steps(2, start) infinite; }
+@keyframes cc-blink { 50% { opacity: .45; } }
+@media (prefers-reduced-motion: reduce) { .clock.paused { animation: none; } }
 
-/* 按钮 py-3.5=14px / rounded-xl 12px / font-medium / gap-2=8px */
-.btn {
-  width: 100%; display: flex; align-items: center; justify-content: center; gap: 8px;
-  padding: 14px 0; border: none; border-radius: 12px; cursor: pointer;
-  font-size: 1rem; font-weight: 500; color: #fff;
-  transition: all 0.3s cubic-bezier(.4, 0, .2, 1);
+.hint .pz { font-weight: 400; color: var(--amber); }
+.hint .sep { margin: 0 8px; color: var(--border2); }
+/* 今日累计的数值：比说明亮一档，读起来是「ARC 的读数」而不是说明的一部分 */
+.hint .td { margin-left: 6px; font-weight: 400; letter-spacing: .06em; color: var(--soft); }
+
+/* ── 动作 ─────────────────────────────── */
+.bh.cut { --bk: var(--danger); --bk-rgb: var(--danger-rgb); }
+.ds { margin: 0; font-size: var(--fs-small); line-height: 1.65; color: var(--dim2); }
+
+.ab {
+  flex: none;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 9px;
+  background: transparent;
+  border: 1px solid rgb(var(--cyan-rgb) / 45%);
+  color: var(--cyan);
+  font-family: var(--share);
+  font-size: var(--btn-size);
+  line-height: 1;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: .15s;
 }
-.btn.lift:hover { transform: translateY(-4px); }   /* hover:-translate-y-1 */
-.btn.lift:active { transform: scale(.95); }          /* active:scale-95 */
-.btn-danger { background: #ef4444; }
-.btn-danger:hover { background: #dc2626; }
-.btn-sky { background: #0ea5e9; box-shadow: 0 10px 15px -3px rgba(14, 165, 233, 0.3); }
-.btn-sky:hover { background: #38bdf8; }
-.btn-ghost { background: #334155; }
-.btn-ghost:hover { background: #475569; }
 
-/* 断开确认弹窗（与参考 modal-box 一致） */
-.modal-overlay {
-  position: fixed; inset: 0; z-index: 999;
-  background: rgba(15, 23, 42, 0.8); -webkit-backdrop-filter: blur(4px); backdrop-filter: blur(4px);
-  display: flex; align-items: center; justify-content: center;
-}
-.modal-box {
-  width: 420px; background: #1e293b; border-radius: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 25px 50px rgba(0, 0, 0, 0.5);
-  padding: 32px; text-align: center;
-}
-.mb-ic { display: block; margin: 0 auto 16px; }
-.mb-ic.danger { color: #ef4444; }
-.mb-title { margin: 0 0 8px; font-size: 1.25rem; line-height: 1.75rem; font-weight: 700; color: #fff; }
-.mb-desc { margin: 0 0 24px; font-size: 0.875rem; line-height: 1.5; color: #94a3b8; }
-.mb-actions { display: flex; gap: 12px; }
-.mb-actions .btn { padding: 12px 0; }   /* py-3 */
+.ab:hover:not(:disabled) { background: rgb(var(--cyan-rgb) / 10%); border-color: var(--cyan); }
+.ab:disabled { opacity: .4; cursor: default; }
+.ab .ico { width: 14px; height: 14px; }
+
+.ab.danger { height: 44px; border-color: rgb(var(--danger-rgb) / 45%); color: var(--danger); background: rgb(var(--danger-rgb) / 6%); }
+.ab.danger:hover:not(:disabled) { background: rgb(var(--danger-rgb) / 12%); border-color: var(--danger); }
+.ab.danger:focus-visible { outline-color: var(--danger); }
 </style>
