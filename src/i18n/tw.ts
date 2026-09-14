@@ -83,6 +83,7 @@ export const tw: Record<Key, string> = {
   'sub.current': '目前訂閱',
   'sub.none': '尚未設定訂閱位址',
   'sub.time': '更新時間',
+  'sub.id': '訂閱號',
   'sub.never': '從未更新',
   'sub.ph': '請輸入訂閱號',
   'sub.update': '更新訂閱',
@@ -91,7 +92,9 @@ export const tw: Record<Key, string> = {
   'sub.netErr': '無法連線訂閱伺服器',
   'sub.invalid': '訂閱號不存在或已過期',
   'sub.empty': '請輸入訂閱號',
-  'sub.hint': '訂閱號由訂閱伺服器簽發，用戶端無法自行建立。伺服器位址也只能經訂閱號取得 —— 沒有訂閱號時節點清單是空的，連不上。',
+  'sub.hint': '訂閱號由訂閱伺服器簽發，伺服器位址只能透過訂閱號取得。',
+  'sub.local': '本機除錯（WPE x64 與用戶端在同一台電腦，且 WPE x64 已開啟遠端管理，預設連接埠 88）可用訂閱號：',
+  'sub.localFill': '點擊填入',
 
   'log.title': '系統日誌',
   'log.time': '時間',

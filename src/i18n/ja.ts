@@ -80,6 +80,7 @@ export const ja: Record<Key, string> = {
   'sub.current': '現在の登録',
   'sub.none': '未設定',
   'sub.time': '更新日時',
+  'sub.id': 'ID',
   'sub.never': '未更新',
   'sub.ph': 'サブスクリプション ID を入力',
   'sub.update': '更新',
@@ -88,7 +89,9 @@ export const ja: Record<Key, string> = {
   'sub.netErr': 'サブスクサーバーに接続できません',
   'sub.invalid': 'サブスクリプション ID が存在しないか、期限切れです',
   'sub.empty': 'サブスクリプション ID を入力してください',
-  'sub.hint': 'サブスクリプション ID はサブスクサーバーが発行します（クライアント側では作成できません）。サーバーアドレスも ID 経由でしか取得できず、ID がないとノード一覧は空のままで接続できません。',
+  'sub.hint': 'サブスクリプション ID はサブスクサーバーが発行し、サーバーアドレスは ID 経由でのみ取得できます。',
+  'sub.local': 'ローカルでのデバッグ（WPE x64 が同じ PC にあり、リモート管理を有効化済み・既定ポート 88）で使える ID：',
+  'sub.localFill': 'クリックで入力',
 
   'log.title': 'システムログ',
   'log.time': '時刻',

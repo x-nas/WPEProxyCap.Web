@@ -80,6 +80,7 @@ export const ko: Record<Key, string> = {
   'sub.current': '현재 구독',
   'sub.none': '설정되지 않음',
   'sub.time': '갱신 시각',
+  'sub.id': '구독 번호',
   'sub.never': '갱신한 적 없음',
   'sub.ph': '구독 번호를 입력하세요',
   'sub.update': '구독 갱신',
@@ -88,7 +89,9 @@ export const ko: Record<Key, string> = {
   'sub.netErr': '구독 서버에 연결할 수 없습니다',
   'sub.invalid': '구독 번호가 없거나 만료되었습니다',
   'sub.empty': '구독 번호를 입력하세요',
-  'sub.hint': '구독 번호는 구독 서버가 발급하며 클라이언트에서 만들 수 없습니다. 서버 주소도 구독 번호로만 받을 수 있어, 번호가 없으면 노드 목록이 비어 있어 연결할 수 없습니다.',
+  'sub.hint': '구독 번호는 구독 서버가 발급하며, 서버 주소는 구독 번호로만 받을 수 있습니다.',
+  'sub.local': '로컬 디버깅(WPE x64가 같은 PC에 있고 원격 관리가 켜져 있음, 기본 포트 88)에 쓰는 구독 번호:',
+  'sub.localFill': '클릭하여 입력',
 
   'log.title': '시스템 로그',
   'log.time': '시각',

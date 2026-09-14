@@ -83,6 +83,7 @@ export const vi: Record<Key, string> = {
   'sub.current': 'Đăng ký hiện tại',
   'sub.none': 'Chưa cấu hình',
   'sub.time': 'Cập nhật lúc',
+  'sub.id': 'Mã đăng ký',
   'sub.never': 'Chưa từng cập nhật',
   'sub.ph': 'Nhập mã đăng ký',
   'sub.update': 'Cập nhật',
@@ -91,7 +92,9 @@ export const vi: Record<Key, string> = {
   'sub.netErr': 'Không kết nối được máy chủ đăng ký',
   'sub.invalid': 'Mã đăng ký không tồn tại hoặc đã hết hạn',
   'sub.empty': 'Vui lòng nhập mã đăng ký',
-  'sub.hint': 'Mã đăng ký do máy chủ đăng ký cấp, ứng dụng không tự tạo được. Địa chỉ máy chủ cũng chỉ lấy được qua mã — không có mã thì danh sách nút trống, không thể kết nối.',
+  'sub.hint': 'Mã đăng ký do máy chủ đăng ký cấp; địa chỉ máy chủ chỉ lấy được qua mã.',
+  'sub.local': 'Gỡ lỗi trên máy (WPE x64 chạy cùng máy và đã bật Quản lý từ xa, cổng mặc định 88) dùng mã:',
+  'sub.localFill': 'Nhấn để điền',
 
   'log.title': 'Nhật ký hệ thống',
   'log.time': 'Thời gian',

@@ -96,6 +96,7 @@ export const DICT = {
   'sub.current': { zh: '当前订阅', en: 'Current' },
   'sub.none': { zh: '未配置订阅地址', en: 'Not configured' },
   'sub.time': { zh: '更新时间', en: 'Updated' },
+  'sub.id': { zh: '订阅号', en: 'ID' },
   'sub.never': { zh: '从未更新', en: 'Never' },
   'sub.ph': { zh: '请输入订阅号', en: 'Enter your subscription ID' },
   'sub.update': { zh: '更新订阅', en: 'Update' },
@@ -104,7 +105,9 @@ export const DICT = {
   'sub.netErr': { zh: '无法连接订阅服务器', en: 'Cannot reach the subscription server' },
   'sub.invalid': { zh: '订阅号不存在或已过期', en: 'Subscription ID not found or expired' },
   'sub.empty': { zh: '请输入订阅号', en: 'Please enter a subscription ID' },
-  'sub.hint': { zh: '订阅号由订阅服务器签发，客户端无法自行创建。服务器地址也只能经订阅号取得 —— 没有订阅号时节点列表是空的，连不上。', en: 'Subscription IDs are issued by the subscription server; the client cannot create one. Server addresses come only from an ID — without one the node list stays empty and there is nothing to connect to.' },
+  'sub.hint': { zh: '订阅号由订阅服务器签发，服务器地址只能通过订阅号获取。', en: 'Subscription IDs are issued by the subscription server; server addresses are only available through an ID.' },
+  'sub.local': { zh: '本机调试（WPE x64 与客户端在同一台电脑，且 WPE x64 已开启远程管理，默认端口 88）可用订阅号：', en: 'Local debugging (WPE x64 on this PC with Remote Management on, default port 88) — use ID:' },
+  'sub.localFill': { zh: '点击填入', en: 'Click to fill in' },
 
   // ── 系统日志 ───────────────────────────────────────────
   'log.title': { zh: '系统日志', en: 'System Log' },

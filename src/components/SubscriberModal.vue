@@ -7,6 +7,14 @@
   而且<b>服务器地址也只能经订阅号取得</b> —— 没有订阅号连不上。
   这两句写在下面那条提示里（`sub.hint`），与官网 wpc.html 是同一套说法。
 
+  【本机调试号 127.0.0.1:88】（`sub.local`，2026-09-14 加）
+  订阅服务器上有一个公用的调试订阅号「127.0.0.1:88」，指向本机 127.0.0.1 的 88 端口 ——
+  也就是同一台电脑上 WPE x64 的远程管理服务（默认端口 88，`/ProxyCap/*` 就挂在上面）。
+  所以前提是本机 WPE x64 开着远程管理；点提示里的「127.0.0.1:88」只是把这个号写进输入框，还要用户自己点「更新订阅」。
+
+  【版式】两段说明分开放：总说明（`sub.hint`）在最上面，本机调试（`sub.local`）在最下面，
+  中间那张卡只放「当前订阅 / 更新时间 / ID」三行。卡片不再带「01 订阅设置」组标题 —— 只有一组，那行和弹窗标题重复。
+
   ⚠️⚠️ <b>「不用订阅号也能连 —— 手填服务器地址即可」是错的，2026-09-12 已改掉。</b>
   那句话从官网抄过来，而它在<b>这个客户端上从来不成立</b>：
   `AppConfig.SubscriberIP` / `SubscriberPort` 全项目<b>只有一处写入</b>
@@ -36,6 +44,13 @@ watch(() => props.open, (v) => {
   input.value = props.subscriberName ?? ''
   err.value = ''
 })
+
+const LOCAL_ID = '127.0.0.1:88'
+
+function fillLocal(): void {
+  input.value = LOCAL_ID
+  err.value = ''
+}
 
 async function update(): Promise<void> {
   const name = input.value.trim()
@@ -85,9 +100,9 @@ async function update(): Promise<void> {
     @save="update"
   >
     <div class="setf">
-      <section class="sec">
-        <div class="grp">{{ t('sub.title') }}</div>
+      <p class="lead">{{ t('sub.hint') }}</p>
 
+      <section class="sec">
         <div class="row">
           <span class="k">{{ t('sub.current') }}</span>
           <b class="v" :class="{ none: !props.subscriberName }">{{ props.subscriberName || t('sub.none') }}</b>
@@ -99,12 +114,16 @@ async function update(): Promise<void> {
         </div>
 
         <div class="row">
-          <span class="k">ID</span>
+          <span class="k">{{ t('sub.id') }}</span>
           <input class="inp" v-model="input" :placeholder="t('sub.ph')" :disabled="busy" @keyup.enter="update" />
         </div>
 
-        <p class="hint">{{ t('sub.hint') }}</p>
       </section>
+
+      <p class="note">
+        {{ t('sub.local') }}
+        <button class="lid" type="button" :disabled="busy" :title="t('sub.localFill')" @click="fillLocal">127.0.0.1:88</button>
+      </p>
     </div>
   </CyberModal>
 </template>
@@ -113,4 +132,24 @@ async function update(): Promise<void> {
 .v { flex: 1; min-width: 0; font-weight: 400; font-size: var(--fs-body); color: var(--gray); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .v.none { color: var(--dim); }
 .v.dim { color: var(--dim2); }
+/* 两段说明与中间卡片左右对齐（卡片是 .setf .sec 的 margin 20px） */
+.lead,
+.note { margin: 0 20px; font-size: var(--fs-small); line-height: 1.7; color: var(--dim2); }
+.lead { padding: 6px 0 2px; }
+.note { padding: 2px 0 6px; }
+.sec { padding: 6px 0; }
+
+/* 可点击的调试订阅号：点一下填进输入框 */
+.lid {
+  margin-left: 2px;
+  padding: 0 6px;
+  border: 1px solid rgb(var(--cyan-rgb) / 40%);
+  background: rgb(var(--cyan-rgb) / 8%);
+  color: var(--cyan);
+  font: inherit;
+  font-family: var(--mono);
+  cursor: pointer;
+}
+.lid:hover:not(:disabled) { border-color: var(--cyan); background: rgb(var(--cyan-rgb) / 16%); }
+.lid:disabled { opacity: .5; cursor: default; }
 </style>
