@@ -132,8 +132,9 @@ async function save(): Promise<void> {
 
 .ds { margin: 0; font-size: var(--fs-small); line-height: 1.65; color: var(--dim2); }
 
-.tools { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-.tools .inp { flex: 1 1 180px; min-width: 0; height: 38px; }
+.tools { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
+/* 搜索框独占一行：与「显示系统应用」挤一行时，英文提示语在 390 宽的手机上被截成「Search by name or pa」 */
+.tools .inp { flex: 1 1 100%; min-width: 0; height: 38px; }
 .tools .chk { min-height: 32px; }
 
 .cnt { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); }
