@@ -24,6 +24,21 @@ const stack = ref<number[]>([])
 /** 有没有模态弹窗开着。App.vue 用它给 .shell 整块加 inert。 */
 export const anyModalOpen = computed(() => stack.value.length > 0)
 
+/* 每个弹窗「怎么关」—— 手机的系统返回键要能关掉最上面那一层（见 closeTopModal） */
+const closers = new Map<number, () => void>()
+
+/**
+ * 关掉最上面那个弹窗。返回 true 表示关了一个（返回键被弹窗消费掉了），
+ * false 表示没有弹窗开着 —— 手机版外壳据此决定要不要把返回键交还给系统（退到后台）。
+ * 弹窗正在办事（busy）时它自己的关闭函数会拒绝关闭，这里同样算「消费掉了」，免得一按返回整个应用退了。
+ */
+export function closeTopModal(): boolean {
+  const s = stack.value
+  if (!s.length) return false
+  closers.get(s[s.length - 1])?.()
+  return true
+}
+
 /**
  * 把一个弹窗登记进来。
  *
@@ -31,7 +46,7 @@ export const anyModalOpen = computed(() => stack.value.length > 0)
  *               弹窗关了栈也清不掉，表现是「关了弹窗父窗体还是点不动」）
  * @returns covered 自己被后开的弹窗盖住了，这时自己也要 inert
  */
-export function useModal(isOpen: () => boolean) {
+export function useModal(isOpen: () => boolean, close?: () => void) {
   const id = ++seq
 
   const set = (v: boolean) => {
@@ -40,8 +55,10 @@ export function useModal(isOpen: () => boolean) {
     stack.value = v ? [...stack.value, id] : stack.value.filter((x) => x !== id)
   }
 
+  if (close) closers.set(id, close)
+
   watch(isOpen, set, { immediate: true })
-  onScopeDispose(() => set(false))
+  onScopeDispose(() => { set(false); closers.delete(id) })
 
   return {
     covered: computed(() => {

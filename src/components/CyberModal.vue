@@ -74,7 +74,8 @@ function close(): void {
 }
 
 /* 登记进模态栈：父窗体因此变 inert；自己被后开的弹窗盖住时也会 inert。见 useModal.ts */
-const { covered } = useModal(() => props.open)
+// 第二个参数：手机的系统返回键关掉最上面那层时走这里（busy 时 close 自己会拒绝）
+const { covered } = useModal(() => props.open, close)
 </script>
 
 <template>

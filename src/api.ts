@@ -103,4 +103,42 @@ export const api = {
    * 同样<b>不落盘</b> —— 它是个运行期的窗体属性，重启回到不置顶。
    */
   setTopMost: (on: boolean) => call<{ topMost: boolean }>('setTopMost', { on }),
+
+  // ── 以下只有 Android 宿主实现（WPEProxyCap.Android 的 Bridge.kt）──────────────
+  // Windows 那边没有这些方法，调了会 reject；调用点一律在 isAndroid 分支里。
+
+  /** 系统与 WebView 信息 + 两项需要引导的权限状态 */
+  getPlatformInfo: () => call<PlatformInfo>('getPlatformInfo'),
+  /** 可以选进「分应用代理」的应用（有启动图标的，不含本应用）。图标是 48px 的 PNG data URL */
+  getApps: () => call<AppEntry[]>('getApps'),
+  getAppProxy: () => call<AppProxy>('getAppProxy'),
+  /** 连接中改了会在下一次连接时生效（VPN 的应用范围只能在建隧道时定） */
+  setAppProxy: (mode: AppProxy['mode'], packages: string[]) => call<boolean>('setAppProxy', { mode, packages }),
+  /** 打开系统的「忽略电池优化」请求；返回之后再调 getPlatformInfo 看结果 */
+  requestIgnoreBattery: () => call<boolean>('requestIgnoreBattery'),
+}
+
+export interface PlatformInfo {
+  platform: 'android'
+  /** 例：Android 14 */
+  osVersion: string
+  /** 例：Xiaomi 23127PN0CC */
+  model: string
+  /** WebView 的 Chromium 主版本号 */
+  webViewMajor: number
+  /** 系统是否在对本应用做电池优化（true = 后台可能被掐断，要引导用户关掉） */
+  batteryOptimized: boolean
+}
+
+export interface AppEntry {
+  pkg: string
+  label: string
+  system: boolean
+  icon: string
+}
+
+export interface AppProxy {
+  /** all = 全部应用走代理（本应用除外）；selected = 只有选中的应用走代理 */
+  mode: 'all' | 'selected'
+  packages: string[]
 }

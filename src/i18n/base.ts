@@ -173,6 +173,31 @@ export const DICT = {
   // ── 用户协议 / 隐私政策 ────────────────────────────────
   'ag.terms': { zh: 'WPE Proxy Cap 用户协议', en: 'WPE Proxy Cap Terms of Use' },
   'ag.privacy': { zh: 'WPE Proxy Cap 隐私政策', en: 'WPE Proxy Cap Privacy Policy' },
+
+  // ── 手机版（WPEProxyCap.Android）专属 ─────────────────────
+  'mob.device': { zh: '设备', en: 'Device' },
+  'mob.apps': { zh: '分应用代理', en: 'Per-app proxy' },
+  'mob.appsAll': { zh: '全部应用', en: 'All apps' },
+  'mob.appsSel': { zh: '仅 {0} 个应用', en: '{0} apps only' },
+  'mob.appsModeAll': { zh: '全部应用走代理', en: 'All apps use the proxy' },
+  'mob.appsModeSel': { zh: '仅选中的应用走代理', en: 'Only selected apps' },
+  'mob.appsDesc': { zh: '本应用自身始终不走代理；修改后在下一次连接时生效。', en: 'This app itself never goes through the proxy. Changes take effect on the next connection.' },
+  'mob.appsPick': { zh: '选择应用', en: 'Choose apps' },
+  'mob.appsSearch': { zh: '搜索应用名或包名', en: 'Search by name or package' },
+  'mob.appsSystem': { zh: '显示系统应用', en: 'Show system apps' },
+  'mob.appsCount': { zh: '已选 {0} 个', en: '{0} selected' },
+  'mob.appsLoading': { zh: '正在读取应用列表…', en: 'Loading apps…' },
+  'mob.appsEmpty': { zh: '没有匹配的应用', en: 'No matching apps' },
+  'mob.appsNone': { zh: '「仅选中的应用走代理」至少要选一个应用', en: 'Choose at least one app, or switch to all apps' },
+  'mob.appsSaved': { zh: '分应用代理已保存', en: 'Per-app proxy saved' },
+  'mob.appsNext': { zh: '已保存，断开后重新连接即可生效', en: 'Saved. Reconnect to apply' },
+  'mob.battery': { zh: '后台运行', en: 'Background' },
+  'mob.batteryLimited': { zh: '受系统限制', en: 'Restricted' },
+  'mob.batteryOk': { zh: '已允许', en: 'Allowed' },
+  'mob.batteryDesc': { zh: '系统正在对本应用做电池优化，锁屏一段时间后连接可能被断开，建议允许后台运行。', en: 'Battery optimization is on for this app, so the connection may drop after the screen has been off for a while. Allow background running to avoid it.' },
+  'mob.batteryFix': { zh: '允许后台运行', en: 'Allow background' },
+  'mob.vpnDenied': { zh: '没有授予 VPN 权限，无法连接', en: 'VPN permission was not granted' },
+  'mob.source': { zh: '开源代码', en: 'Source code' },
 } as const
 
 export type Key = keyof typeof DICT

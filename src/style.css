@@ -960,3 +960,38 @@ textarea:focus-visible,
 }
 
 .loader.c i { background: var(--cyan); box-shadow: 0 0 8px var(--cyan); }
+
+/* ══════════════════════════════════════════════════════════════════
+   手机版（WPEProxyCap.Android）的全局覆盖 —— 一律挂在 html[data-platform="android"] 下，
+   Windows 版一条都吃不到（main.ts 把平台写在 <html> 上，Teleport 到 body 的弹窗也在范围内）。
+
+   ⚠️ 这里<b>不许用 :has() / color-mix()</b>：System WebView 可能停在较老的 Chromium（见 vite.config.ts）。
+   ⚠️ 特异度：组件 scoped 的 .dlg[data-v-x] 是 (0,2,0)，这里 html[...] .dlg 是 (0,2,1)，所以不用 !important。
+   ══════════════════════════════════════════════════════════════════ */
+
+html[data-platform="android"] body { -webkit-tap-highlight-color: transparent; }
+
+/* 弹窗：左右各留 10px、上下各留 16px，内容区自己滚；页脚按钮放不下时整行换行而不是挤扁 */
+html[data-platform="android"] .mask > .dlg {
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 32px);
+}
+html[data-platform="android"] .mask > .dlg .ft { flex-wrap: wrap; padding: 12px 14px; }
+html[data-platform="android"] .mask > .dlg .ft .btn { min-height: 40px; }
+html[data-platform="android"] .mask > .dlg .hd { padding: 12px 10px 11px 16px; }
+html[data-platform="android"] .mask > .dlg .x { width: 40px; height: 40px; }
+
+/* 确认框 */
+html[data-platform="android"] .mask > .box { max-width: calc(100vw - 24px); }
+
+/* 设置弹窗的分区卡：左右边距从 20 收到 12，把宽度留给控件 */
+html[data-platform="android"] .setf .sec { margin-left: 12px; margin-right: 12px; }
+
+/* 轻提示：底部居中、左右留边，不再贴右下角（手机上右下角正是拇指的位置） */
+html[data-platform="android"] .tst-wrap {
+  left: 12px;
+  right: 12px;
+  bottom: 20px;
+  align-items: stretch;
+}
+html[data-platform="android"] .tst-wrap .tst { min-width: 0; max-width: none; }

@@ -17,6 +17,9 @@
         ?theme=light   浅色
         ?lang=en       语言（zh | tw | en | ja | ko | vi | ru）
         ?empty=1       公告与节点都为空（验空态）
+        ?platform=android  手机版（假宿主换成 window.wpcNative，报文走 JSON 文本，与 Android 的 WebMessageListener 一致）
+        ?battery=ok    手机版：电池优化已关（默认假装「受系统限制」，让引导卡片显示出来）
+        ?apps=sel      手机版：分应用代理预设成「仅选中的 3 个应用」
 
       【为什么需要它】bridge.ts 在模块顶层读 window.chrome.webview，
       普通浏览器里拿不到 → 所有 call 都 reject，界面只剩一句「要在 WPC 里打开」。
@@ -111,20 +114,63 @@
           },
         }
 
-        window.chrome = window.chrome || {}
-        window.chrome.webview = {
-          addEventListener: function (_t, fn) { listeners.push(fn) },
-          postMessage: function (msg) {
-            var fn = HANDLERS[msg.method]
-            var resp
-            if (!fn) resp = { type: 'result', id: msg.id, ok: false, error: '[probe] 未知方法: ' + msg.method }
-            else {
-              try { resp = { type: 'result', id: msg.id, ok: true, result: fn(msg.args || {}) } }
-              catch (e) { resp = { type: 'result', id: msg.id, ok: false, error: String(e) } }
-            }
-            // 异步回，与真桥一致 —— 同步回会让「先注册监听再发请求」那条顺序失效
-            setTimeout(function () { listeners.forEach(function (l) { l({ data: resp }) }) }, 0)
-          },
+        function answer(msg) {
+          var fn = HANDLERS[msg.method]
+          if (!fn) return { type: 'result', id: msg.id, ok: false, error: '[probe] 未知方法: ' + msg.method }
+          try { return { type: 'result', id: msg.id, ok: true, result: fn(msg.args || {}) } }
+          catch (e) { return { type: 'result', id: msg.id, ok: false, error: String(e) } }
+        }
+
+        if (q.get('platform') === 'android') {
+          /* ── 手机版假宿主：Android 的 WebMessageListener 注入的对象只收发字符串 ── */
+          var ICON = function (c) {
+            return 'data:image/svg+xml;utf8,' + encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48"><rect x="4" y="4" width="40" height="40" rx="10" fill="' + c + '"/><circle cx="24" cy="24" r="9" fill="#fff" fill-opacity=".85"/></svg>')
+          }
+          var APPS = [
+            { pkg: 'com.tencent.tmgp.sgame', label: '王者荣耀', system: false, icon: ICON('#d4a017') },
+            { pkg: 'com.tencent.tmgp.pubgmhd', label: '和平精英', system: false, icon: ICON('#2f7d32') },
+            { pkg: 'com.miHoYo.Yuanshen', label: '原神', system: false, icon: ICON('#5b7bd5') },
+            { pkg: 'com.netease.hyxd.aligames', label: '荒野行动（一个名字特别长的渠道服版本）', system: false, icon: ICON('#8d6e63') },
+            { pkg: 'com.tencent.mm', label: '微信', system: false, icon: ICON('#07c160') },
+            { pkg: 'com.eg.android.AlipayGphone', label: '支付宝', system: false, icon: ICON('#1677ff') },
+            { pkg: 'com.android.chrome', label: 'Chrome', system: true, icon: ICON('#db4437') },
+            { pkg: 'com.android.settings', label: '设置', system: true, icon: ICON('#607d8b') },
+          ]
+          var APP_PROXY = q.get('apps') === 'sel'
+            ? { mode: 'selected', packages: ['com.tencent.tmgp.sgame', 'com.tencent.tmgp.pubgmhd', 'com.miHoYo.Yuanshen'] }
+            : { mode: 'all', packages: [] }
+
+          HANDLERS.getPlatformInfo = function () {
+            return { platform: 'android', osVersion: 'Android 14', model: 'Xiaomi 23127PN0CC', webViewMajor: 138, batteryOptimized: q.get('battery') !== 'ok' }
+          }
+          HANDLERS.getApps = function () { return APPS }
+          HANDLERS.getAppProxy = function () { return APP_PROXY }
+          HANDLERS.setAppProxy = function (a) { APP_PROXY = { mode: a.mode, packages: a.packages }; return true }
+          HANDLERS.requestIgnoreBattery = function () { return true }
+          HANDLERS.getMihomoVersion = function () { return 'Mihomo Meta v1.19.21 android arm64' }
+          HANDLERS.getOsVersion = function () { return 'Android 14 · Xiaomi 23127PN0CC · WebView 138' }
+
+          window.wpcNative = {
+            addEventListener: function (_t, fn) {
+              listeners.push(function (ev) { fn({ data: JSON.stringify(ev.data) }) })
+            },
+            postMessage: function (text) {
+              var msg = JSON.parse(text)
+              if (msg.method === '__hello') return
+              var resp = answer(msg)
+              setTimeout(function () { listeners.forEach(function (l) { l({ data: resp }) }) }, 0)
+            },
+          }
+        } else {
+          window.chrome = window.chrome || {}
+          window.chrome.webview = {
+            addEventListener: function (_t, fn) { listeners.push(fn) },
+            postMessage: function (msg) {
+              var resp = answer(msg)
+              // 异步回，与真桥一致 —— 同步回会让「先注册监听再发请求」那条顺序失效
+              setTimeout(function () { listeners.forEach(function (l) { l({ data: resp }) }) }, 0)
+            },
+          }
         }
 
         // 连上之后每秒推一次实时数据（延迟故意在三档配色之间来回走）
@@ -172,12 +218,21 @@
         var want = new URLSearchParams(location.search).get('auto')
         if (!want) return
 
-        var SEL = {
+        var android = new URLSearchParams(location.search).get('platform') === 'android'
+        var SEL = (android ? {
+          set: '.mbar .wb.gear',
+          sub: '.subbtn:not(.cy):not(.am)',
+          log: '.mbar .wb:not(.gear)',
+          verify: '.ab:not(.danger)',
+          apps: '.subbtn.cy',          // 手机版 DEVICE 卡的「选择应用」
+          cut: '.ab.danger',           // 断开连接的确认框
+        } : {
           set: '.titlebar .wb.gear',
           sub: '.subbtn',   // 订阅设置在右侧 SUBSCRIPTION 舱底部，标题栏上没有这颗
           log: '.titlebar .wb:not(.gear):not(.sub):not(.pin):not(.close)',
           verify: '.ab:not(.danger)',   // 控制中心右侧 SECURITY 舱的「立即安全验证」
-        }[want]
+          cut: '.ab.danger',
+        })[want]
 
         if (!SEL) { console.warn('[probe:auto] 未知 auto', want); return }
 

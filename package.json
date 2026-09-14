@@ -2,10 +2,15 @@
   "name": "wpeproxycap-web",
   "private": true,
   "version": "1.0.0",
+  "license": "MIT",
   "type": "module",
   "scripts": {
     "dev": "vite",
-    "build": "vue-tsc -b && vite build",
+    "build": "npm run build:windows",
+    "build:windows": "vue-tsc -b && vite build --mode windows",
+    "build:android": "vue-tsc -b && vite build --mode android",
+    "build:all": "vue-tsc -b && vite build --mode windows && vite build --mode android",
+    "check:fonts": "node tools/check-font-sizes.mjs",
     "preview": "vite preview"
   },
   "dependencies": {

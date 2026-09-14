@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "wpc-web-dev",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["run", "dev"],
+      "cwd": "C:/Users/Gary/Desktop/程序源代码/x-nas/WPEProxyCap.Web",
+      "port": 5173
+    }
+  ]
+}

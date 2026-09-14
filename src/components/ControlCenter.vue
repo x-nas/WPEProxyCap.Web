@@ -8,86 +8,27 @@
 
   暂停：2026-09-13 起<b>整个核心就是按钮</b>（方案 C），点六边形任意位置暂停 / 继续；
   悬停时六边形底色变亮、描边加粗，下方提示转成当前色；暂停后整环转琥珀、数字慢闪。
+
+  【与手机版共用】逻辑在 useControlPanel.ts、零件样式在 control.css（2026-09-14 拆出来），
+  手机版的 mobile/MobileControl.vue 用的是同一份，这里只剩三舱骨架。
 */
-import { computed, ref, watch } from 'vue'
-import { api, type LiveStats, type NoticeInfo } from '../api'
+import type { LiveStats, NoticeInfo } from '../api'
 import { t } from '../i18n'
 import CyberConfirm from './CyberConfirm.vue'
 import ReactorCore from './ReactorCore.vue'
 import IntelBand from './IntelBand.vue'
 import Sparkline from './Sparkline.vue'
+import { useControlPanel } from './useControlPanel'
 
 const props = defineProps<{ stats: LiveStats | null; serverName: string; notices: NoticeInfo[] }>()
 
 const emit = defineEmits<{ (e: 'verify'): void; (e: 'disconnected'): void }>()
 
-const paused = ref(false)
-const pauseBusy = ref(false)   // 桥调用在途时挡住连点，免得前端状态与 C# 那边对不上
-const disconnectOpen = ref(false)
-const busy = ref(false)
-
-/* 曲线的点前端自己攒：每次 stats 推一个，封顶 60 —— 不需要新的桥方法 */
-const HIST = 60
-const upHist = ref<number[]>([])
-const downHist = ref<number[]>([])
-
-watch(() => props.stats, (s) => {
-  if (!s) return
-  upHist.value = [...upHist.value, s.upKBps].slice(-HIST)
-  downHist.value = [...downHist.value, s.downKBps].slice(-HIST)
-})
-
-const delayText = computed(() => {
-  const d = props.stats?.delayMs
-  return d == null || d < 0 ? t('cc.offline') : `${d} ms`
-})
-
-/** 延迟分档：≤80 绿 · ≤160 琥珀 · 更高或不通红 */
-const delayTone = computed(() => {
-  const d = props.stats?.delayMs
-  if (d == null || d < 0) return 'd'
-  if (d <= 80) return 'g'
-  return d <= 160 ? 'a' : 'd'
-})
-
-const fmt = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 1, maximumFractionDigits: 1 })
-const upText = computed(() => fmt(props.stats?.upKBps ?? 0))
-const downText = computed(() => fmt(props.stats?.downKBps ?? 0))
-const memText = computed(() => String(Math.round(props.stats?.memoryMB ?? 0)))
-
-const todayText = computed(() => {
-  const s = props.stats?.todayOnlineSeconds ?? 0
-  const h = Math.floor(s / 3600)
-  const m = Math.floor((s % 3600) / 60)
-  if (h && m) return `${h} ${t('cc.hour')} ${m} ${t('cc.minute')}`
-  if (h) return `${h} ${t('cc.hour')}`
-  return `${m} ${t('cc.minute')}`
-})
-
-const health = computed(() => Math.max(0, Math.min(1, props.stats?.healthProgress ?? 0)))
-const healthPct = computed(() => Math.round(health.value * 100))
-
-async function togglePause(): Promise<void> {
-  if (pauseBusy.value) return
-  pauseBusy.value = true
-  try {
-    if (paused.value) { await api.resumeOnlineTime(); paused.value = false }
-    else { await api.pauseOnlineTime(); paused.value = true }
-  } finally { pauseBusy.value = false }
-}
-
-async function confirmDisconnect(): Promise<void> {
-  busy.value = true
-  try {
-    await api.disconnect()
-    /*
-      ⚠️ 主动报一次「断开了」而不是只等 C# 推 `disconnected` 事件：
-      事件万一没到（桥断了、窗口正在关），界面会一直卡在控制中心而后台其实已经停了。
-      事件到了也无妨，App 那边幂等。
-    */
-    emit('disconnected')
-  } finally { busy.value = false }
-}
+const {
+  paused, pauseBusy, disconnectOpen, busy, upHist, downHist,
+  delayText, delayTone, upText, downText, memText, todayText, health, healthPct,
+  togglePause, confirmDisconnect,
+} = useControlPanel(() => props.stats, () => emit('disconnected'))
 </script>
 
 <template>
@@ -181,145 +122,4 @@ async function confirmDisconnect(): Promise<void> {
 </template>
 
 <style scoped src="./reactor.css"></style>
-
-<style scoped>
-
-/* ── 遥测 ─────────────────────────────── */
-.rd { display: flex; flex-direction: column; gap: 2px; }
-.rk { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-.rv { font-family: var(--orbit); font-size: var(--fs-num-lg); line-height: 1.25; font-variant-numeric: tabular-nums; color: var(--gray); }
-.rv.c { color: var(--cyan); }
-.kv.last { border-bottom: 0; }
-.mem { color: var(--amber) !important; }
-
-/* ── 铭牌 ─────────────────────────────── */
-.plate {
-  flex: none;
-  width: 100%;
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 14px;
-  border: 1px solid rgb(var(--green-rgb) / 45%);
-  background: linear-gradient(90deg, rgb(var(--green-rgb) / 8%), transparent 60%), var(--card);
-  font-size: var(--fs-body);
-}
-
-.led { flex: none; width: 8px; height: 8px; background: var(--green); box-shadow: 0 0 8px var(--green); }
-/* 2026-09-13 按要求：四段一律同一个字号（--fs-body），不再靠 top 逐段补 —— 字号不一样时各段的墨迹高度不同，怎么补看着都不齐 */
-.pst { flex: none; font-family: var(--share); font-size: var(--fs-body); letter-spacing: .12em; text-transform: uppercase; color: var(--green); }
-.pn { flex: 1; min-width: 0; font-size: var(--fs-body); color: var(--gray); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.pk { flex: none; font-family: var(--share); font-size: var(--fs-body); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-.pd { flex: none; font-family: var(--orbit); font-size: var(--fs-body); font-variant-numeric: tabular-nums; }
-.pd.g { color: var(--green); }
-.pd.a { color: var(--amber); }
-.pd.d { color: var(--danger); }
-
-/* ── 核心计时 ─────────────────────────── */
-.stage .k { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
-
-/*
-  ⚠️ 字号规范里<b>唯一的例外</b>（与 WPE 启动页的 62px 机位号丝印同一类：整屏的主视觉，不是正文）。
-  九级里最大的 --fs-num-lg 只有 22px，放进 300px 的圆环里撑不起「核心计时表」。
-  写定值不写 clamp(…vw)：圆环跟窗口<b>高度</b>缩放，按宽度算的字号会与环对不上。
-  白名单在 tools/check-font-sizes.mjs。
-*/
-.clock {
-  font-family: var(--orbit);
-  font-weight: 900;
-  font-size: 30px;
-  line-height: 1.15;
-  letter-spacing: .04em;
-  font-variant-numeric: tabular-nums;
-  color: var(--green);
-  text-shadow: 0 0 22px rgb(var(--green-rgb) / 40%);
-}
-
-.clock.paused { color: var(--amber); text-shadow: 0 0 22px rgb(var(--amber-rgb) / 35%); }
-
-/*
-  整个核心就是暂停键（方案 C）—— 写法照主页的 .engage：透明圆形按钮包住 ReactorCore。
-  ⚠️ 焦点环画在内侧（outline-offset 负值）：圆环外面就是舱位边界，正偏移会被裁掉一截。
-*/
-.core-btn {
-  height: 100%;
-  max-width: 100%;
-  aspect-ratio: 1;
-  padding: 0;
-  background: transparent;
-  border: 0;
-  border-radius: 50%;
-  color: inherit;
-  font-family: inherit;
-  cursor: pointer;
-}
-
-.core-btn:disabled { cursor: progress; }
-.core-btn:focus-visible { outline: 2px solid var(--green); outline-offset: -8px; }
-.core-btn.paused:focus-visible { outline-color: var(--amber); }
-.core-btn :deep(.hex) { transition: fill .2s, stroke-width .2s; }
-.core-btn:hover :deep(.hex) { fill: rgb(var(--rc-rgb) / 14%); stroke-width: 2.2; }
-
-/* 核心里的提示：平时是暗的说明，悬停转成当前色（绿 / 琥珀），暂停时常亮琥珀 */
-.tap {
-  margin-top: 8px;
-  max-width: 100%;   /* 六边形内宽只有 ~197px：长语言兜底截断，文案已尽量收短 */
-  overflow: hidden;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  font-family: var(--share);
-  font-size: var(--fs-caption);
-  line-height: 1;
-  letter-spacing: .14em;
-  color: var(--muted);
-  white-space: nowrap;
-  transition: color .2s;
-}
-
-.tap svg { width: 9px; height: 9px; fill: currentColor; }
-.core-btn:hover .tap { color: var(--green); }
-.core-btn.paused .tap { color: var(--amber); }
-
-/* 暂停后数字慢闪，一眼看出「这个数现在不动」 */
-.clock.paused { animation: cc-blink 1.4s steps(2, start) infinite; }
-@keyframes cc-blink { 50% { opacity: .45; } }
-@media (prefers-reduced-motion: reduce) { .clock.paused { animation: none; } }
-
-.hint .pz { font-weight: 400; color: var(--amber); }
-.hint .sep { margin: 0 8px; color: var(--border2); }
-/* 今日累计的数值：比说明亮一档，读起来是「ARC 的读数」而不是说明的一部分 */
-.hint .td { margin-left: 6px; font-weight: 400; letter-spacing: .06em; color: var(--soft); }
-
-/* ── 动作 ─────────────────────────────── */
-.bh.cut { --bk: var(--danger); --bk-rgb: var(--danger-rgb); }
-.ds { margin: 0; font-size: var(--fs-small); line-height: 1.65; color: var(--dim2); }
-
-.ab {
-  flex: none;
-  height: 40px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 9px;
-  background: transparent;
-  border: 1px solid rgb(var(--cyan-rgb) / 45%);
-  color: var(--cyan);
-  font-family: var(--share);
-  font-size: var(--btn-size);
-  line-height: 1;
-  letter-spacing: .14em;
-  text-transform: uppercase;
-  cursor: pointer;
-  transition: .15s;
-}
-
-.ab:hover:not(:disabled) { background: rgb(var(--cyan-rgb) / 10%); border-color: var(--cyan); }
-.ab:disabled { opacity: .4; cursor: default; }
-.ab .ico { width: 14px; height: 14px; }
-
-.ab.danger { height: 44px; border-color: rgb(var(--danger-rgb) / 45%); color: var(--danger); background: rgb(var(--danger-rgb) / 6%); }
-.ab.danger:hover:not(:disabled) { background: rgb(var(--danger-rgb) / 12%); border-color: var(--danger); }
-.ab.danger:focus-visible { outline-color: var(--danger); }
-</style>
+<style scoped src="./control.css"></style>

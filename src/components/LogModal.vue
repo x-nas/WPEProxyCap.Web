@@ -13,6 +13,7 @@
 import { computed, onBeforeUnmount, ref } from 'vue'
 import type { LogItem } from '../api'
 import { t, tf } from '../i18n'
+import { isAndroid } from '../platform'
 import CyberModal from './CyberModal.vue'
 
 const props = defineProps<{ open: boolean; logs: LogItem[] }>()
@@ -40,11 +41,12 @@ const rows = computed(() => props.logs.map((l, i) => ({ ...l, key: i })).reverse
   表头右边界一条 7px 的手柄，双击恢复默认。表头与行共用同一份列模板，拖的时候两边一起变。
   ⚠️ 鼠标监听挂在 window 上 —— 快拖时鼠标会跑出那条窄条。宽度不持久化，关掉弹窗再开回默认。
 */
-const MD_DEFAULT = 112
+// 手机竖屏只有三百多像素宽：时间与模块两列收窄，把宽度让给日志内容
+const MD_DEFAULT = isAndroid ? 72 : 112
 const MD_MIN = 60
 const MD_MAX = 360
 const mdW = ref(MD_DEFAULT)
-const cols = computed(() => ({ gridTemplateColumns: `78px ${mdW.value}px 1fr` }))
+const cols = computed(() => ({ gridTemplateColumns: `${isAndroid ? 60 : 78}px ${mdW.value}px 1fr` }))
 
 let dragX = 0
 let dragW = 0

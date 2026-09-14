@@ -41,7 +41,8 @@ watch(() => props.open, async (on) => {
 function close(): void { emit('update:open', false) }
 function ok(): void { emit('confirm'); emit('update:open', false) }
 
-const { covered } = useModal(() => props.open)
+// 第二个参数：手机的系统返回键关掉最上面那层时走这里（等同点「取消」）
+const { covered } = useModal(() => props.open, close)
 </script>
 
 <template>
