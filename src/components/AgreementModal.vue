@@ -57,4 +57,11 @@ const lines = computed(() =>
 
 /* 版权行：小一号 + 最不显眼的那一档灰 */
 .ln.cp { font-size: var(--fs-small); color: var(--dim); }
+
+/* 手机：正文用辅助字号（13px）、左右边距收窄 —— 正文 15px 时一行只放得下十来个字，几乎每句都折行 */
+@media (max-width: 599px) {
+  html[data-platform="android"] .ag { padding: 4px 16px 14px; }
+  html[data-platform="android"] .ln { font-size: var(--fs-small); line-height: 1.7; }
+  html[data-platform="android"] .ln.cp { font-size: var(--fs-caption); }
+}
 </style>
