@@ -83,7 +83,7 @@ async function cut(): Promise<void> {
 
     <div class="m-wrap wide">
       <header class="m-hd">
-        <span class="m-wm">WPC</span>
+        <span class="m-wm">WPE <small>PROXY CAP</small></span>
         <span v-if="!connected" class="m-pill">{{ busy ? t('home.connecting') : t('mob.idle') }}</span>
         <span v-else class="m-pill" :class="paused ? 'amber' : 'on'">{{ paused ? t('cc.paused') : t('mob.boosting') }}</span>
       </header>
@@ -137,7 +137,13 @@ async function cut(): Promise<void> {
             </button>
           </div>
 
-          <p v-if="connected" class="today">{{ t('cc.today') }} <b>{{ todayText }} · {{ healthPct }}%</b></p>
+          <!-- 标签 / 时长 / 分隔点 / 百分比四段用 flex gap 等距排，不靠文字里的空格（等宽字体的空格与中文字距不一样宽） -->
+          <p v-if="connected" class="today">
+            <span>{{ t('cc.today') }}</span>
+            <b>{{ todayText }}</b>
+            <i aria-hidden="true">·</i>
+            <b>{{ healthPct }}%</b>
+          </p>
         </section>
 
         <!-- ── 右栏：节点、读数、操作 ─────────── -->
@@ -265,8 +271,9 @@ async function cut(): Promise<void> {
 .where { font-size: var(--fs-small); color: var(--soft); }
 .where b { font-family: var(--mono); font-weight: 400; }
 
-.today { margin: -4px 0 0; font-size: var(--fs-small); color: var(--dim2); text-align: center; }
-.today b { font-family: var(--mono); font-weight: 400; color: var(--soft); }
+.today { margin: -4px 0 0; display: flex; flex-wrap: wrap; justify-content: center; align-items: baseline; gap: 4px 8px; font-size: var(--fs-small); color: var(--dim2); }
+.today b { font-weight: 500; color: var(--soft); font-variant-numeric: tabular-nums; }
+.today i { font-style: normal; color: var(--dim); }
 
 .node { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--gray); font: inherit; text-align: left; cursor: pointer; }
 .node .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }

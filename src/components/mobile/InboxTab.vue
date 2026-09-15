@@ -29,11 +29,9 @@ const TAGS: Record<number, { k: Key; s: Key }> = {
 const typeOf = (n: NoticeInfo) => (TAGS[n.noticeType] ? n.noticeType : 1)
 
 const wide = useMedia('(min-width: 840px)')
-const filter = ref(0)
 const activeKey = ref<string | null>(null)
 
-const types = computed(() => [...new Set(props.notices.map(typeOf))].sort((a, b) => a - b))
-const list = computed(() => props.notices.filter((n) => !filter.value || typeOf(n) === filter.value))
+// 2026-09-15 起不再按类型筛选（用户要求：类型会越来越多，全部显示即可）；每条左边仍带类型小标签
 const active = computed(() => props.notices.find((n) => noticeKey(n) === activeKey.value) ?? null)
 const unread = computed(() => {
   void readKeys.value
@@ -82,14 +80,9 @@ const { pull, refreshing } = usePullRefresh(page, () => props.refresh())
           <button v-if="unread" class="m-link" type="button" @click="markAllRead(notices)">{{ t('mob.readAll') }}</button>
         </header>
 
-        <div v-if="types.length > 1" class="chips">
-          <button class="m-chip" :class="{ on: !filter }" type="button" @click="filter = 0">{{ t('mob.all') }} {{ notices.length }}</button>
-          <button v-for="ty in types" :key="ty" class="m-chip" :class="{ on: filter === ty }" type="button" @click="filter = ty">{{ t(TAGS[ty].k) }}</button>
-        </div>
-
-        <div v-if="list.length" class="m-card">
+        <div v-if="notices.length" class="m-card">
           <button
-            v-for="n in list" :key="noticeKey(n)"
+            v-for="n in notices" :key="noticeKey(n)"
             class="ni" :class="{ on: wide && noticeKey(n) === activeKey }" type="button"
             @click="openNotice(n)"
           >
@@ -141,10 +134,7 @@ const { pull, refreshing } = usePullRefresh(page, () => props.refresh())
 .inbox.wide .list-pane { border-right: 1px solid var(--border); }
 .inbox.wide .det-pane .m-wrap { padding-top: 24px; }
 
-.chips { min-width: 0; display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; margin: 0 -16px; padding: 0 16px; }
-.chips .m-chip { flex: none; }
 .list-pane .m-wrap { min-width: 0; }
-.chips::-webkit-scrollbar { display: none; }
 
 .ni { position: relative; width: 100%; min-height: 64px; display: flex; align-items: flex-start; gap: 10px; padding: 12px 34px 12px 14px; border: 0; background: transparent; color: var(--gray); font: inherit; text-align: left; cursor: pointer; }
 .ni + .ni { border-top: 1px solid var(--border); }

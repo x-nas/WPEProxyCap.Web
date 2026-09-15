@@ -191,7 +191,7 @@ export const ru: Record<Key, string> = {
   'mob.obAgree': 'Продолжая, вы принимаете',
   'mob.and': 'и',
   'mob.idle': 'Выключено',
-  'mob.boosting': 'Ускорение включено',
+  'mob.boosting': 'Включено',
   'mob.curNode': 'Текущий узел',
   'mob.noNode': 'Узлов пока нет. Сначала настройте подписку.',
   'mob.start': 'Нажмите, чтобы начать',

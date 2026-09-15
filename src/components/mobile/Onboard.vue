@@ -79,7 +79,7 @@ async function finish(): Promise<void> {
   <div class="m-page ob">
     <div class="in">
       <div class="top">
-        <span class="m-wm">WPC</span>
+        <span class="m-wm">WPE <small>PROXY CAP</small></span>
         <div class="prog" aria-hidden="true"><i class="on" /><i :class="{ on: step === 2 }" /></div>
       </div>
 
