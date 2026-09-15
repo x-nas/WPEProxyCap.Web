@@ -3,7 +3,7 @@
 
   本文件是 WinsockPacketEditor/WinsockPacketEditor/WebUI/src/tokens.css 的<b>副本</b>：
   两个产品是两个独立 Git 仓库、各自打包，没法共享同一个文件。
-  ⚠️ <b>改配色要两边一起改</b>（还有第三份：官网 WPEWeb.Cyber/assets/css/cyber.css 的 :root）。
+  ⚠️ <b>改配色要两边一起改</b>（还有第三份：官网 WPEWeb/assets/css/cyber.css 的 :root）。
 
   WPC 用不到的令牌（封包表的行分隔线、十六进制游标…）<b>刻意保留</b> ——
   逐条删掉会让两份文件对不上，下次同步就得逐行比对；留着一份多余的变量不要钱。
