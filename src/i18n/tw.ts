@@ -160,7 +160,6 @@ export const tw: Record<Key, string> = {
   'mob.appsModeAll': '全部應用程式走代理',
   'mob.appsModeSel': '僅選取的應用程式走代理',
   'mob.appsDesc': '本應用程式本身永遠不走代理；修改後在下一次連線時生效。',
-  'mob.appsSearch': '搜尋應用程式名稱或套件名稱',
   'mob.appsSystem': '顯示系統應用程式',
   'mob.appsCount': '已選 {0} 個',
   'mob.appsLoading': '正在讀取應用程式清單…',
@@ -232,4 +231,8 @@ export const tw: Record<Key, string> = {
   'mob.accRequired': '請填寫帳號和密碼',
   'mob.showPwd': '顯示密碼',
   'mob.hidePwd': '隱藏密碼',
+  'mob.logError': '錯誤',
+  'mob.logWarn': '警告',
+  'mob.logInfo': '資訊',
+  'mob.logDebug': '偵錯',
 }

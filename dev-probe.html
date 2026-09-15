@@ -204,7 +204,7 @@
           emit('log', { type: 0, logTime: new Date().toISOString(), logName: 'System', logContent: '配置文件已生成：config.yaml' })
           emit('log', { type: 3, logTime: new Date().toISOString(), logName: 'Mihomo', logContent: 'API 内核 v1.19.2' })
           emit('log', { type: 1, logTime: new Date().toISOString(), logName: 'Network', logContent: '订阅服务器响应较慢（1284 ms）' })
-          emit('log', { type: 2, logTime: new Date().toISOString(), logName: 'Proxy', logContent: 'SOCKS5 握手失败：远程主机强迫关闭了一个现有的连接' })
+          emit('log', { type: 2, logTime: new Date().toISOString(), logName: 'Proxy', logContent: 'SOCKS5 握手失败：远程主机强迫关闭了一个现有的连接（10.172.190.252:1080，已重试 3 次，下一次在 20 秒后）—— 这一条故意写长，验证手机版日志卡片里全文自动换行不截断' })
         }, 300)
       })()
     </script>

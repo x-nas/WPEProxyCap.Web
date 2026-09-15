@@ -11,10 +11,18 @@ import { nextTick, ref, watch } from 'vue'
 import { t } from '../../i18n'
 import { useModal } from '../../useModal'
 
-const props = withDefaults(defineProps<{ open: boolean; title?: string; persistent?: boolean; busy?: boolean }>(), {
+const props = withDefaults(defineProps<{
+  open: boolean
+  title?: string
+  persistent?: boolean
+  busy?: boolean
+  /** 固定高度（手机 88vh / 平板 80vh）：内容会不断变多的弹层（系统日志）用它，免得内容一多面板就一跳一跳地长高 */
+  fixed?: boolean
+}>(), {
   title: '',
   persistent: false,
   busy: false,
+  fixed: false,
 })
 
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>()
@@ -42,7 +50,7 @@ watch(() => props.open, async (on) => {
 <template>
   <Teleport to="body">
     <div v-if="props.open" class="bs-mask" :inert="covered" @click.self="onMask">
-      <section ref="box" class="bs" role="dialog" aria-modal="true" :aria-label="props.title" tabindex="-1" @keydown.esc="close">
+      <section ref="box" class="bs" :class="{ fixed: props.fixed }" role="dialog" aria-modal="true" :aria-label="props.title" tabindex="-1" @keydown.esc="close">
         <div class="bs-handle" aria-hidden="true" />
         <header v-if="props.title" class="bs-hd">
           <h2>{{ props.title }}</h2>
@@ -85,6 +93,8 @@ watch(() => props.open, async (on) => {
   animation: bs-up .22s ease-out;
 }
 
+.bs.fixed { height: 88vh; }
+
 .bs-handle { flex: none; width: 40px; height: 4px; margin: 10px auto 2px; border-radius: 4px; background: var(--border2); }
 
 .bs-hd { flex: none; display: flex; align-items: center; gap: 8px; padding: 6px 8px 8px 20px; }
@@ -103,6 +113,7 @@ watch(() => props.open, async (on) => {
 @media (min-width: 600px) {
   .bs-mask { justify-content: center; align-items: center; padding: 24px; }
   .bs { width: min(560px, 100%); max-height: 80vh; border: 1px solid var(--border2); border-radius: 18px; }
+  .bs.fixed { height: 80vh; }
   .bs-handle { display: none; }
   .bs-hd { padding-top: 12px; }
 }

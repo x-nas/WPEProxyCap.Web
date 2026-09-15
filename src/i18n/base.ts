@@ -181,7 +181,6 @@ export const DICT = {
   'mob.appsModeAll': { zh: '全部应用走代理', en: 'All apps use the proxy' },
   'mob.appsModeSel': { zh: '仅选中的应用走代理', en: 'Only selected apps' },
   'mob.appsDesc': { zh: '本应用自身始终不走代理；修改后在下一次连接时生效。', en: 'This app itself never goes through the proxy. Changes take effect on the next connection.' },
-  'mob.appsSearch': { zh: '搜索应用名或包名', en: 'Search by name or package' },
   'mob.appsSystem': { zh: '显示系统应用', en: 'Show system apps' },
   'mob.appsCount': { zh: '已选 {0} 个', en: '{0} selected' },
   'mob.appsLoading': { zh: '正在读取应用列表…', en: 'Loading apps…' },
@@ -253,6 +252,11 @@ export const DICT = {
   'mob.accRequired': { zh: '请填写账号和密码', en: 'Enter your account and password' },
   'mob.showPwd': { zh: '显示密码', en: 'Show password' },
   'mob.hidePwd': { zh: '隐藏密码', en: 'Hide password' },
+  // 手机版系统日志的等级筛选（2026-09-15）
+  'mob.logError': { zh: '错误', en: 'Error' },
+  'mob.logWarn': { zh: '警告', en: 'Warning' },
+  'mob.logInfo': { zh: '信息', en: 'Info' },
+  'mob.logDebug': { zh: '调试', en: 'Debug' },
 } as const
 
 export type Key = keyof typeof DICT

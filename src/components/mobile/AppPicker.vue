@@ -26,13 +26,11 @@ const apps = ref<AppEntry[]>([])
 const loading = ref(false)
 const busy = ref(false)
 const err = ref('')
-const q = ref('')
 const showSys = ref(false)
 
 watch(() => props.open, async (on) => {
   if (!on) return
   err.value = ''
-  q.value = ''
   loading.value = true
   try {
     const cur = await api.getAppProxy()
@@ -46,12 +44,11 @@ watch(() => props.open, async (on) => {
   }
 })
 
+// 2026-09-15 起不再有搜索框（用户要求：直接在列表里选）：选中的排最前，其余按名字排
 const rows = computed(() => {
-  const key = q.value.trim().toLowerCase()
   const sel = picked.value
   return apps.value
     .filter((a) => showSys.value || !a.system || sel.has(a.pkg))
-    .filter((a) => !key || a.label.toLowerCase().includes(key) || a.pkg.toLowerCase().includes(key))
     .sort((a, b) => Number(sel.has(b.pkg)) - Number(sel.has(a.pkg)) || a.label.localeCompare(b.label))
 })
 
@@ -103,7 +100,6 @@ async function save(): Promise<void> {
 
       <template v-if="mode === 'selected'">
         <div class="tools">
-          <input id="ap-q" v-model="q" class="inp" type="search" autocapitalize="off" :placeholder="t('mob.appsSearch')" />
           <button class="chk" :class="{ on: showSys }" @click="showSys = !showSys"><i />{{ t('mob.appsSystem') }}</button>
         </div>
 
@@ -133,8 +129,6 @@ async function save(): Promise<void> {
 .ds { margin: 0; font-size: var(--fs-small); line-height: 1.65; color: var(--dim2); }
 
 .tools { display: flex; align-items: center; gap: 10px 12px; flex-wrap: wrap; }
-/* 搜索框独占一行：与「显示系统应用」挤一行时，英文提示语在 390 宽的手机上被截成「Search by name or pa」 */
-.tools .inp { flex: 1 1 100%; min-width: 0; height: 38px; }
 .tools .chk { min-height: 32px; }
 
 .cnt { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); }

@@ -161,7 +161,6 @@ export const ru: Record<Key, string> = {
   'mob.appsModeAll': 'Все приложения через прокси',
   'mob.appsModeSel': 'Только выбранные',
   'mob.appsDesc': 'Само приложение не использует прокси. Изменения вступят в силу при следующем подключении.',
-  'mob.appsSearch': 'Поиск по названию или пакету',
   'mob.appsSystem': 'Системные приложения',
   'mob.appsCount': 'Выбрано: {0}',
   'mob.appsLoading': 'Загрузка списка приложений…',
@@ -233,4 +232,8 @@ export const ru: Record<Key, string> = {
   'mob.accRequired': 'Введите логин и пароль',
   'mob.showPwd': 'Показать пароль',
   'mob.hidePwd': 'Скрыть пароль',
+  'mob.logError': 'Ошибка',
+  'mob.logWarn': 'Предупреждение',
+  'mob.logInfo': 'Инфо',
+  'mob.logDebug': 'Отладка',
 }

@@ -36,7 +36,7 @@ import BottomSheet from './components/mobile/BottomSheet.vue'
 import AccountSheet from './components/mobile/AccountSheet.vue'
 import SubscribeSheet from './components/mobile/SubscribeSheet.vue'
 import AppPicker from './components/mobile/AppPicker.vue'
-import LogModal from './components/LogModal.vue'
+import LogSheet from './components/mobile/LogSheet.vue'
 import VerifyModal from './components/VerifyModal.vue'
 import AgreementModal from './components/AgreementModal.vue'
 import ToastStack from './components/ToastStack.vue'
@@ -330,7 +330,7 @@ const TABS: Array<{ id: Tab; k: Key; d: string }> = [
       :subscriber-time="state?.subscriberTime ?? null"
       @updated="refreshAll" />
 
-    <LogModal v-model:open="logOpen" :logs="logs"
+    <LogSheet v-model:open="logOpen" :logs="logs"
               @check-api="checkApi" @check-system="checkSystem" @clear="logs = []" />
 
     <VerifyModal v-model:open="verifyOpen" />

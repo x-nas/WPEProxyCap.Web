@@ -157,7 +157,6 @@ export const ja: Record<Key, string> = {
   'mob.appsModeAll': 'すべてのアプリをプロキシ経由に',
   'mob.appsModeSel': '選択したアプリのみ',
   'mob.appsDesc': 'このアプリ自体はプロキシを通りません。変更は次回の接続から有効になります。',
-  'mob.appsSearch': 'アプリ名またはパッケージ名で検索',
   'mob.appsSystem': 'システムアプリを表示',
   'mob.appsCount': '{0} 個選択中',
   'mob.appsLoading': 'アプリ一覧を読み込み中…',
@@ -229,4 +228,8 @@ export const ja: Record<Key, string> = {
   'mob.accRequired': 'アカウントとパスワードを入力してください',
   'mob.showPwd': 'パスワードを表示',
   'mob.hidePwd': 'パスワードを隠す',
+  'mob.logError': 'エラー',
+  'mob.logWarn': '警告',
+  'mob.logInfo': '情報',
+  'mob.logDebug': 'デバッグ',
 }

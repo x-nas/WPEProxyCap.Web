@@ -157,7 +157,6 @@ export const ko: Record<Key, string> = {
   'mob.appsModeAll': '모든 앱이 프록시 사용',
   'mob.appsModeSel': '선택한 앱만',
   'mob.appsDesc': '이 앱 자체는 프록시를 거치지 않습니다. 변경 사항은 다음 연결부터 적용됩니다.',
-  'mob.appsSearch': '앱 이름 또는 패키지 이름 검색',
   'mob.appsSystem': '시스템 앱 표시',
   'mob.appsCount': '{0}개 선택됨',
   'mob.appsLoading': '앱 목록을 불러오는 중…',
@@ -229,4 +228,8 @@ export const ko: Record<Key, string> = {
   'mob.accRequired': '계정과 비밀번호를 입력하세요',
   'mob.showPwd': '비밀번호 표시',
   'mob.hidePwd': '비밀번호 숨기기',
+  'mob.logError': '오류',
+  'mob.logWarn': '경고',
+  'mob.logInfo': '정보',
+  'mob.logDebug': '디버그',
 }

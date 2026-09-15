@@ -160,7 +160,6 @@ export const vi: Record<Key, string> = {
   'mob.appsModeAll': 'Mọi ứng dụng đi qua proxy',
   'mob.appsModeSel': 'Chỉ ứng dụng đã chọn',
   'mob.appsDesc': 'Bản thân ứng dụng này không đi qua proxy. Thay đổi có hiệu lực từ lần kết nối tiếp theo.',
-  'mob.appsSearch': 'Tìm theo tên hoặc gói',
   'mob.appsSystem': 'Hiện ứng dụng hệ thống',
   'mob.appsCount': 'Đã chọn {0}',
   'mob.appsLoading': 'Đang tải danh sách ứng dụng…',
@@ -232,4 +231,8 @@ export const vi: Record<Key, string> = {
   'mob.accRequired': 'Hãy nhập tài khoản và mật khẩu',
   'mob.showPwd': 'Hiện mật khẩu',
   'mob.hidePwd': 'Ẩn mật khẩu',
+  'mob.logError': 'Lỗi',
+  'mob.logWarn': 'Cảnh báo',
+  'mob.logInfo': 'Thông tin',
+  'mob.logDebug': 'Gỡ lỗi',
 }
