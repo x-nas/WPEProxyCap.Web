@@ -971,6 +971,14 @@ textarea:focus-visible,
 
 html[data-platform="android"] body { -webkit-tap-highlight-color: transparent; }
 
+/*
+  手机版不画键盘焦点环（2026-09-15，用户要求）：手机靠手指操作，Tab 焦点环在触屏上只会变成「点完按钮多出一圈绿框」
+  （模拟器接电脑键盘时尤其明显）。组件里各自写的 :focus-visible 特异度高低不一，这里统一用 !important 关掉。
+  输入框聚焦时的青边（.m-inp:focus-within / .inp:focus）不是焦点环，是「正在输入」的状态，保留。
+*/
+html[data-platform="android"] *:focus,
+html[data-platform="android"] *:focus-visible { outline: none !important; }
+
 /* 弹窗：左右各留 10px、上下各留 16px，内容区自己滚；页脚按钮放不下时整行换行而不是挤扁 */
 html[data-platform="android"] .mask > .dlg {
   max-width: calc(100vw - 20px);
@@ -1025,6 +1033,12 @@ html[data-platform="android"] .tst-wrap .tst { min-width: 0; max-width: none; }
     white-space: nowrap;
   }
   html[data-platform="android"] .mask > .dlg .tt .sub { display: none; }
+  /*
+    内容区不许定高：协议 / 系统日志给了 bodyHeight=460（内联 height + flex:none），矮屏手机上
+    标题栏 + 460 + 页脚超过 92vh，超出部分被 overflow:hidden 裁掉，底部「关闭」按钮只露半截。
+    手机上改成随内容伸缩、最高撑满弹窗，内容区自己滚。内联样式只能用 !important 盖。
+  */
+  html[data-platform="android"] .mask > .dlg > .bd { height: auto !important; flex: 1 1 auto !important; min-height: 0; }
   html[data-platform="android"] .mask > .box { max-width: 100vw; width: 100%; border-radius: 18px 18px 0 0; }
   html[data-platform="android"] .tst-wrap { bottom: 78px; }
 }

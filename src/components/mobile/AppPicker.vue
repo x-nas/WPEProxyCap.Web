@@ -139,9 +139,11 @@ async function save(): Promise<void> {
 
 .cnt { font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .14em; text-transform: uppercase; color: var(--cyan); }
 
+/*
+  列表不单独限高滚动：弹窗内容区本身会滚，列表再滚一层就是两条滚动条、手指滑动时不知道滚的是哪个。
+  整个弹窗只留内容区一个滚动，列表随内容自然变长。
+*/
 .list {
-  max-height: 46vh;
-  overflow-y: auto;
   border: 1px solid var(--border);
   background: rgb(var(--inset-rgb) / 20%);
 }
