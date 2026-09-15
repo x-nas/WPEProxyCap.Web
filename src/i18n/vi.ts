@@ -202,7 +202,7 @@ export const vi: Record<Key, string> = {
   'mob.noProxyToast': 'Đã kết nối, nhưng nút này không proxy lưu lượng nào trên điện thoại',
   'mob.details': 'Xem giải thích',
   'mob.allow': 'Cho phép',
-  'mob.batteryWarn': 'Chạy nền đang bị hạn chế nên có thể mất kết nối khi tắt màn hình',
+  'mob.batteryWarn': 'Chạy nền đang bị hạn chế',
   'mob.verify': 'Xác minh',
   'mob.disconnect': 'Ngắt kết nối',
   'mob.retest': 'Đo lại',

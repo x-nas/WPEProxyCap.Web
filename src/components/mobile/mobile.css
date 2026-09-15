@@ -137,6 +137,9 @@ button.m-strip { cursor: pointer; }
   border: 1px solid var(--border2); border-radius: 12px; background: rgb(var(--inset-rgb) / 20%);
 }
 .m-inp:focus-within { border-color: var(--cyan); box-shadow: 0 0 0 3px rgb(var(--cyan-rgb) / 14%); }
+/* ⚠️ 焦点由外框 .m-inp 画（青边 + 光晕），输入框自己不再画 style.css 那条全局的绿色 outline —— 否则两层框叠在一起（模拟器用电脑键盘输入时必现） */
+html[data-platform="android"] .m-inp input:focus,
+html[data-platform="android"] .m-inp input:focus-visible { outline: none; }
 .m-inp input {
   flex: 1; min-width: 0; height: 100%; border: 0; outline: none; background: transparent;
   color: var(--gray); font-family: var(--mono); font-size: var(--fs-body);

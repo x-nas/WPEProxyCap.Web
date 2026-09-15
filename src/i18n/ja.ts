@@ -199,7 +199,7 @@ export const ja: Record<Key, string> = {
   'mob.noProxyToast': '接続しましたが、このノードはスマホでは通信をプロキシしません',
   'mob.details': '詳しく見る',
   'mob.allow': '許可する',
-  'mob.batteryWarn': 'バックグラウンド動作が制限されているため、画面オフで切断されることがあります',
+  'mob.batteryWarn': 'バックグラウンド動作が制限されています',
   'mob.verify': '安全検証',
   'mob.disconnect': '切断',
   'mob.retest': '再計測',

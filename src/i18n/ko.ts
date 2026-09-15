@@ -199,7 +199,7 @@ export const ko: Record<Key, string> = {
   'mob.noProxyToast': '연결되었지만 이 노드는 휴대폰에서 트래픽을 프록시하지 않습니다',
   'mob.details': '자세히 보기',
   'mob.allow': '허용하기',
-  'mob.batteryWarn': '백그라운드 실행이 제한되어 화면이 꺼지면 연결이 끊길 수 있습니다',
+  'mob.batteryWarn': '백그라운드 실행이 제한됨',
   'mob.verify': '보안 검증',
   'mob.disconnect': '연결 해제',
   'mob.retest': '다시 측정',

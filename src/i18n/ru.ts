@@ -203,7 +203,7 @@ export const ru: Record<Key, string> = {
   'mob.noProxyToast': 'Подключено, но этот узел не проксирует трафик на телефоне',
   'mob.details': 'Подробнее',
   'mob.allow': 'Разрешить',
-  'mob.batteryWarn': 'Фоновая работа ограничена — при выключенном экране соединение может оборваться',
+  'mob.batteryWarn': 'Фоновая работа ограничена',
   'mob.verify': 'Проверка',
   'mob.disconnect': 'Отключить',
   'mob.retest': 'Замерить снова',

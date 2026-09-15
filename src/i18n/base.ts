@@ -223,7 +223,7 @@ export const DICT = {
   'mob.noProxyToast': { zh: '已连接，但这个节点在手机上不会代理任何流量', en: 'Connected, but this node won\'t proxy any traffic on a phone' },
   'mob.details': { zh: '查看说明', en: 'Learn more' },
   'mob.allow': { zh: '去允许', en: 'Allow' },
-  'mob.batteryWarn': { zh: '后台运行受系统限制，锁屏后连接可能断开', en: 'Background running is restricted, so the connection may drop when the screen is off' },
+  'mob.batteryWarn': { zh: '后台运行受限，锁屏后可能断开', en: 'Background running is restricted' },
   'mob.verify': { zh: '安全验证', en: 'Verify' },
   'mob.disconnect': { zh: '断开', en: 'Disconnect' },
   'mob.retest': { zh: '重新测速', en: 'Test again' },

@@ -202,7 +202,7 @@ export const tw: Record<Key, string> = {
   'mob.noProxyToast': '已連線，但這個節點在手機上不會代理任何流量',
   'mob.details': '查看說明',
   'mob.allow': '去允許',
-  'mob.batteryWarn': '背景執行受系統限制，鎖定螢幕後連線可能中斷',
+  'mob.batteryWarn': '背景執行受限，鎖定螢幕後可能中斷',
   'mob.verify': '安全驗證',
   'mob.disconnect': '中斷連線',
   'mob.retest': '重新測速',

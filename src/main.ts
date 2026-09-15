@@ -3,6 +3,7 @@ import App from './App.vue'
 import AppMobile from './AppMobile.vue'
 import './style.css'
 import { installTooltip } from './tooltip'
+import { installFocusTrap } from './focusTrap'
 import { isAndroid, PLATFORM } from './platform'
 
 /*
@@ -26,5 +27,8 @@ document.documentElement.dataset.platform = PLATFORM
 // 接管原生 title（与 WPE x64 同一份 tooltip.ts）。触屏上没有「悬停」：点一下弹出来的提示会压在按钮上，
 // 所以 Android 不装，那边的图标按钮一律有 aria-label
 if (!isAndroid) installTooltip()
+
+// 弹窗打开时键盘焦点只在最上层里转（老 WebView 不认 inert，Tab 会跑到遮罩后面，见 focusTrap.ts）
+installFocusTrap()
 
 createApp(isAndroid ? AppMobile : App).mount('#app')
