@@ -301,23 +301,24 @@ async function cut(): Promise<void> {
 <style scoped>
 /*
   一屏放下（2026-09-15 用户要求：加速页尽量不要下拉滚动）。
-  外层定高 = 页面高度；核心那一栏吃掉剩下的高度、核心按它缩放，其余卡片按内容高 ——
-  屏幕矮时是核心变小，而不是整页出滚动条。核心最小 110px，再矮（横屏手机）才让外层撑出去整页滚动。
-  ⚠️ 核心栏不能写 min-height: 0：它的最小高度要由核心的 110px 撑住，否则会被压到卡片底下。
+  外层定高 = 页面高度；核心按「理想高度」排（未连接 236、已连接 300），<b>只在放不下时收缩</b>，最小 110px，
+  其余卡片按内容高 —— 屏幕矮时是核心变小，而不是整页出滚动条；屏幕高时不拉伸，富余的高度留在页面最底下。
+  ⚠️ 不能写成「核心那一栏 flex-grow 吃掉剩余高度」：高屏上核心到了上限就不再长，核心和卡片之间会空出一大块（2026-09-15 截图撞到）。
+  再矮（横屏手机）才让外层撑出去整页滚动。
 */
 .boost .m-wrap { height: 100%; gap: 8px; padding-bottom: 10px; }
 .notes { flex: none; display: flex; flex-direction: column; gap: 6px; margin-top: -4px; }
 .notes .m-strip { padding: 7px 12px; }
-.cols { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
+.cols { flex: 0 1 auto; min-height: 0; display: flex; flex-direction: column; gap: 8px; }
 .col { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
 /* 分应用代理那一行 52 → 44：矮屏上这 8px 换给核心 */
 .col .m-row { min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
 
-.core-col { flex: 1 1 auto; align-items: center; gap: 4px; }
+.core-col { flex: 0 1 auto; min-height: 0; align-items: center; gap: 4px; }
 
-.stage { flex: 1 1 auto; width: 100%; min-height: 110px; max-height: 300px; display: grid; place-items: center; }
-/* 未连接时核心上限小一档：下面还有节点卡和账号卡 */
-.stage.idle { max-height: 236px; }
+.stage { flex: 0 1 300px; width: 100%; min-height: 110px; display: grid; place-items: center; }
+/* 未连接时核心理想高度小一档：下面还有节点卡和账号卡 */
+.stage.idle { flex-basis: 236px; }
 
 .engage { height: 100%; aspect-ratio: 1; max-width: 100%; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .engage:disabled { cursor: default; }
