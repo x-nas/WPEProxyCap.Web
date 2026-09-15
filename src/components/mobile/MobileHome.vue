@@ -52,7 +52,7 @@ const appsText = computed(() => {
   <div class="mhome">
     <!-- ── 节点 + 核心 ─────────────────────────── -->
     <section class="center hero" :class="{ off: coreTone === 'off' }">
-      <div class="nodes" role="radiogroup" :aria-label="t('home.server')">
+      <div class="nodes" :class="{ solo: servers.length <= 1 }" role="radiogroup" :aria-label="t('home.server')">
         <button
           v-for="(s, i) in servers" :key="s.serverId"
           class="node" :class="{ on: s.serverId === selectedId }"
@@ -176,8 +176,11 @@ const appsText = computed(() => {
 
 /* 核心：宽度占满、按屏宽定高（正方形），小屏不至于顶满整屏 */
 .hero { padding: 2px 0 0; }
-.hero .nodes { grid-auto-columns: minmax(138px, 46%); scrollbar-width: none; }
+/* 节点磁贴：两张以上时每张占约四分之三行宽，右边露出下一张，提示可以横滑；半宽时连「华东一区 · 上海 BGP」都放不下 */
+.hero .nodes { grid-auto-columns: 76%; scrollbar-width: none; }
 .hero .nodes::-webkit-scrollbar { display: none; }
+/* 只有一张磁贴（没有节点的「暂无服务器 · 订阅设置」，或只有一个节点）时占满整行，文字不再被截断；两张以上才半宽横滑 */
+.hero .nodes.solo { grid-auto-columns: 100%; }
 .hero .stage { flex: none; height: 76vw; max-height: 300px; min-height: 220px; padding: 4px 0; }
 .hero .hint { padding-bottom: 2px; }
 
