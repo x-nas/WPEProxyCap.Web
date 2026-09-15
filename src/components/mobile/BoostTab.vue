@@ -161,9 +161,16 @@ async function cut(): Promise<void> {
               <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
             </button>
 
+            <!-- 没有节点：图标 + 说明 + 一颗整宽的大按钮（原来是一条细边框的扁按钮，2026-09-15 用户要求重做） -->
             <div v-else class="m-card empty">
+              <span class="em-ic" aria-hidden="true">
+                <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18" /></svg>
+              </span>
               <p>{{ t('mob.noNode') }}</p>
-              <button class="m-btn cy" type="button" @click="emit('subscribe')">{{ t('mob.goSub') }}</button>
+              <button class="m-btn sub-go" type="button" data-probe="gosub" @click="emit('subscribe')">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M10 14a4 4 0 0 0 5.7 0l3-3a4 4 0 0 0-5.7-5.7l-1 1" /><path d="M14 10a4 4 0 0 0-5.7 0l-3 3a4 4 0 0 0 5.7 5.7l1-1" /></svg>
+                {{ t('mob.goSub') }}
+              </button>
             </div>
 
             <div class="m-card">
@@ -281,8 +288,11 @@ async function cut(): Promise<void> {
 .node .lat { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: var(--fs-small); color: var(--dim2); }
 .node .chev { width: 18px; height: 18px; flex: none; color: var(--dim); }
 
-.empty { padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
-.empty p { margin: 0; color: var(--soft); }
+.empty { padding: 22px 16px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
+.empty p { margin: 0 0 4px; line-height: 1.6; color: var(--soft); }
+.em-ic { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: rgb(var(--cyan-rgb) / 10%); color: var(--cyan); }
+.em-ic .ico { width: 26px; height: 26px; }
+.sub-go { flex: none; align-self: stretch; height: 52px; min-height: 52px; background: rgb(var(--cyan-rgb) / 12%); border-color: rgb(var(--cyan-rgb) / 55%); color: var(--cyan); font-size: var(--fs-lead); }
 
 .stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--m-radius); overflow: hidden; }
 .st { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--card); }

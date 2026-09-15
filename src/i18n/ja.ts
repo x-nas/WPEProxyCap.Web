@@ -147,6 +147,8 @@ export const ja: Record<Key, string> = {
 
   'msg.noServer': 'サーバーアドレスを取得できません。サブスクリプション設定を確認してください。',
   'msg.loginFail': '接続に失敗しました。サブスクリプション設定とアカウント・パスワードを確認してください。',
+  'msg.noLink': 'このノードにはこのリンクが設定されていません',
+  'msg.openFail': 'リンクを開けませんでした。ブラウザがインストールされているか確認してください',
 
   'ag.terms': 'WPE Proxy Cap 利用規約',
   'ag.privacy': 'WPE Proxy Cap プライバシーポリシー',

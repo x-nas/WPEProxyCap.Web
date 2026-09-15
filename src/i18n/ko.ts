@@ -147,6 +147,8 @@ export const ko: Record<Key, string> = {
 
   'msg.noServer': '서버 주소를 가져올 수 없습니다. 구독 설정을 확인하세요.',
   'msg.loginFail': '연결에 실패했습니다. 구독 설정과 계정·비밀번호를 확인하세요.',
+  'msg.noLink': '이 노드에는 해당 링크가 없습니다',
+  'msg.openFail': '링크를 열 수 없습니다. 브라우저가 설치되어 있는지 확인하세요',
 
   'ag.terms': 'WPE Proxy Cap 이용약관',
   'ag.privacy': 'WPE Proxy Cap 개인정보 처리방침',

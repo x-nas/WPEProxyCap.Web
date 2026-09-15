@@ -13,8 +13,9 @@
   【焦点】打开时把焦点移进弹窗，并经 useModal 让父窗体整块 inert；
   不这么做的话 Tab 能走到标题栏的「退出」上，回车就把程序关了。
 */
-import { nextTick, ref, watch } from 'vue'
+import { computed, nextTick, ref, useSlots, watch } from 'vue'
 import { t } from '../i18n'
+import { isAndroid } from '../platform'
 import { useModal } from '../useModal'
 
 const props = defineProps<{
@@ -73,6 +74,19 @@ function close(): void {
   emit('update:open', false)
 }
 
+/*
+  手机上的只读弹窗（协议 / 安全验证，2026-09-15 用户要求）：不要页脚那颗「关闭」，
+  手机用户习惯点右上角 × 或点遮罩关。页脚里还有错误文字或额外按钮时照常显示。
+  有表单的弹窗不变 —— 点遮罩丢掉填了一半的东西太容易误触。
+*/
+const slots = useSlots()
+const lightClose = computed(() => isAndroid && !!props.readonly)
+const showFoot = computed(() => !lightClose.value || !!props.error || !!slots.actions)
+
+function onMask(): void {
+  if (lightClose.value) close()
+}
+
 /* 登记进模态栈：父窗体因此变 inert；自己被后开的弹窗盖住时也会 inert。见 useModal.ts */
 // 第二个参数：手机的系统返回键关掉最上面那层时走这里（busy 时 close 自己会拒绝）
 const { covered } = useModal(() => props.open, close)
@@ -84,10 +98,10 @@ const { covered } = useModal(() => props.open, close)
     出去了才不会被 .shell 的 inert 一起禁掉，遮罩也才盖得住标题栏。
 
     ⚠️ <b>点遮罩不关闭弹窗</b>：订阅设置里是填了一半的东西，点空白处就丢掉太容易误操作。
-    出口只留「取消 / 关闭」按钮与 Esc。
+    出口只留「取消 / 关闭」按钮与 Esc。例外是手机上的只读弹窗（见 lightClose）。
   -->
-  <Teleport to="body"><div v-if="props.open" class="mask" :inert="covered">
-    <div ref="box" class="dlg" :class="{ ro: props.readonly }" role="dialog" aria-modal="true"
+  <Teleport to="body"><div v-if="props.open" class="mask" :inert="covered" @click.self="onMask">
+    <div ref="box" class="dlg" :class="{ ro: props.readonly, nofoot: !showFoot }" role="dialog" aria-modal="true"
          :style="props.width ? { width: props.width + 'px' } : undefined" @keydown.esc="close">
       <header class="hd">
         <span class="mk tl" /><span class="mk tr" />
@@ -109,7 +123,7 @@ const { covered } = useModal(() => props.open, close)
         <slot />
       </div>
 
-      <footer class="ft">
+      <footer v-if="showFoot" class="ft">
         <span v-if="props.error" class="err">
           <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" /><path d="M12 8v5M12 16h.01" /></svg>
           {{ props.error }}
@@ -222,6 +236,8 @@ const { covered } = useModal(() => props.open, close)
 .dlg.ro .x:focus-visible { outline-color: var(--cyan); }
 
 .bd { flex: 1; min-height: 0; overflow-y: auto; padding: 4px 0; }
+/* 没有页脚时内容别贴着屏幕底边（手机上弹窗从底部弹出） */
+.dlg.nofoot .bd { padding-bottom: 14px; }
 
 .ft {
   position: relative;

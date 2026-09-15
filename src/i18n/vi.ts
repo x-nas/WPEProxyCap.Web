@@ -150,6 +150,8 @@ export const vi: Record<Key, string> = {
 
   'msg.noServer': 'Không lấy được địa chỉ máy chủ, hãy kiểm tra lại phần đăng ký.',
   'msg.loginFail': 'Kết nối thất bại, hãy kiểm tra đăng ký, tài khoản và mật khẩu.',
+  'msg.noLink': 'Nút này không cung cấp liên kết này.',
+  'msg.openFail': 'Không mở được liên kết. Hãy kiểm tra đã cài trình duyệt chưa.',
 
   'ag.terms': 'Điều khoản sử dụng WPE Proxy Cap',
   'ag.privacy': 'Chính sách quyền riêng tư WPE Proxy Cap',

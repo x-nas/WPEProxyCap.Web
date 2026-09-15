@@ -71,10 +71,16 @@ export function useLoginForm(
     } finally { busy.value = false }
   }
 
-  /** 找回密码 / 立即注册：无 http(s):// 前缀则补 http://（对应原程序 Operate.InitURLString） */
-  function openServerUrl(rawUrl?: string): void {
-    if (!selectedServer.value || !rawUrl) return
-    api.openExternal(/^https?:\/\//i.test(rawUrl) ? rawUrl : 'http://' + rawUrl)
+  /**
+   * 找回密码 / 立即注册：无 http(s):// 前缀则补 http://（对应原程序 Operate.InitURLString）。
+   * ⚠️ 打不开时一定要出声（2026-09-15 用户报「点了没反应」）：还没有节点、节点没配这条链接、系统打不开链接，各给一句提示。
+   */
+  async function openServerUrl(rawUrl?: string): Promise<void> {
+    if (!selectedServer.value) { pushToast('warning', t('mob.noNode')); return }
+    const url = rawUrl?.trim()
+    if (!url) { pushToast('warning', t('msg.noLink')); return }
+    const ok = await api.openExternal(/^https?:\/\//i.test(url) ? url : 'http://' + url).catch(() => false)
+    if (!ok) pushToast('error', t('msg.openFail'))
   }
 
   return {

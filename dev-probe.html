@@ -17,6 +17,7 @@
         ?theme=light   浅色
         ?lang=en       语言（zh | tw | en | ja | ko | vi | ru）
         ?empty=1       公告与节点都为空（验空态）
+        ?nodes=0       有订阅号和账号、但没有节点（手机版加速页的「设置订阅」空卡片）
         ?platform=android  手机版（假宿主换成 window.wpcNative，报文走 JSON 文本，与 Android 的 WebMessageListener 一致）
         ?battery=ok    手机版：电池优化已关（默认假装「受系统限制」，让引导卡片显示出来）
         ?apps=sel      手机版：分应用代理预设成「仅选中的 3 个应用」
@@ -50,7 +51,7 @@
           { noticeType: 5, noticeTitle: '玩家社区月度精选', noticeContent: '本月最受欢迎的十篇实战贴已整理上线。', noticeMore: 'https://www.wpe64.com/', noticeTime: '2026-09-07T20:15:00' },
         ]
 
-        var SERVERS = empty ? [] : [
+        var SERVERS = empty || q.get('nodes') === '0' ? [] : [
           // phoneRules 只有 Android 宿主给：s3 在手机上一条走代理的规则都没有（节点列表挂标签）；?rules=none 让选中的 s1 也这样（首页出提示条）
           { serverId: 's1', serverName: '华东一区 · 上海 BGP', serverIP: '10.172.190.252', serverPort: 1080, forgotURL: 'www.wpe64.com/forgot', registerURL: 'www.wpe64.com/reg', verifyURL: 'https://www.wpe64.com/', phoneRules: q.get('rules') === 'none' ? { total: 2, kept: 1, skipped: 1, proxy: 0 } : { total: 6, kept: 5, skipped: 1, proxy: 3 } },
           { serverId: 's2', serverName: '华南一区 · 广州电信', serverIP: '10.172.190.253', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '', phoneRules: { total: 4, kept: 4, skipped: 0, proxy: 2 } },

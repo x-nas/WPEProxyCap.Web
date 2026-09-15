@@ -87,8 +87,9 @@ button.m-row:active { background: rgb(var(--tint-rgb) / 5%); }
 .m-grp-t { margin: 4px 4px -6px; font-family: var(--share); font-weight: 400; font-size: var(--fs-caption); letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
 
 /* ── 按钮 ─────────────────────────────── */
+/* ⚠️ min-height 不能省：竖排 flex 容器里 flex: 1 的 flex-basis 0% 会盖掉 height，按钮被压成一行字高（空状态卡的「设置订阅」撞过） */
 .m-btn {
-  flex: 1; min-width: 0; height: 50px; padding: 0 18px;
+  flex: 1; min-width: 0; height: 50px; min-height: 50px; padding: 0 18px;
   display: inline-flex; align-items: center; justify-content: center; gap: 8px;
   border: 1px solid var(--border2); border-radius: var(--m-radius); background: transparent;
   color: var(--gray); font-family: var(--m-sans); font-size: var(--fs-body); font-weight: 600; white-space: nowrap;

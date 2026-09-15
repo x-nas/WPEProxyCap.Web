@@ -150,6 +150,8 @@ export const tw: Record<Key, string> = {
 
   'msg.noServer': '無法取得伺服器位址，請檢查訂閱設定是否正確',
   'msg.loginFail': '登入失敗，請檢查訂閱設定與帳號密碼',
+  'msg.noLink': '該節點沒有提供這個連結',
+  'msg.openFail': '無法開啟連結，請檢查是否安裝了瀏覽器',
 
   'ag.terms': 'WPE Proxy Cap 使用者條款',
   'ag.privacy': 'WPE Proxy Cap 隱私權政策',

@@ -169,6 +169,8 @@ export const DICT = {
   // ── 提示 / 错误 ────────────────────────────────────────
   'msg.noServer': { zh: '无法获取服务器地址，请检查订阅设置是否正确', en: 'No server address available. Check your subscription settings.' },
   'msg.loginFail': { zh: '登录失败，请检查订阅设置与账号密码', en: 'Connection failed. Check your subscription, account and password.' },
+  'msg.noLink': { zh: '该节点没有提供这个链接', en: "This node doesn't provide this link." },
+  'msg.openFail': { zh: '无法打开链接，请检查是否安装了浏览器', en: "Couldn't open the link. Check that a browser is installed." },
 
   // ── 用户协议 / 隐私政策 ────────────────────────────────
   'ag.terms': { zh: 'WPE Proxy Cap 用户协议', en: 'WPE Proxy Cap Terms of Use' },
