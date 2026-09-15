@@ -3,7 +3,8 @@
   「加速」页（手机版 2.0，方案 A）。
 
   未连接：反应堆核心（它就是连接按钮，未连接时缩小一档）→ 节点卡（点开节点弹层）→ 账号卡（账号 / 密码 / 记住我 /
-  找回密码 · 立即注册，2026-09-15 起从引导第二步挪到这里 —— 还没有账号的用户要能直接在主界面上注册）→ 分应用代理。
+  找回密码 · 立即注册，2026-09-15 起从引导第二步挪到这里 —— 还没有账号的用户要能直接在主界面上注册；
+  没有节点时不显示，只留「设置订阅」空卡片）→ 分应用代理。
   已连接：计时 + 核心（点按暂停计时）→ 四格读数（上行 / 下行带曲线、延迟、内存）→ 安全验证 / 断开。
   两种状态下核心的位置不变。平板宽屏（≥ 840px）左边核心、右边卡片。
 
@@ -195,8 +196,11 @@ async function cut(): Promise<void> {
               </button>
             </div>
 
-            <!-- 账号卡：改动在失焦 / 切换开关时就落盘（与 Windows 主页同一种手感），连接前再确认一次 -->
-            <div class="m-card acc" data-probe="acc">
+            <!--
+              账号卡：改动在失焦 / 切换开关时就落盘（与 Windows 主页同一种手感），连接前再确认一次。
+              ⚠️ 没有节点就不显示（2026-09-15 用户要求）：先有节点才谈得上登录，找回密码 / 注册的地址也取自选中的节点。
+            -->
+            <div v-if="servers.length" class="m-card acc" data-probe="acc">
               <label class="m-lbl" for="bt-user">{{ t('home.account') }}</label>
               <div class="m-inp">
                 <input id="bt-user" ref="userInput" v-model="username" autocomplete="username" autocapitalize="off" spellcheck="false"
