@@ -45,6 +45,18 @@ const { pull, refreshing } = usePullRefresh(page, () => props.refresh())
         </button>
       </header>
 
+      <!--
+        订阅号：有节点之后改订阅号的入口（2026-09-15 从「我的」页挪来）。
+        ⚠️ 别删：加速页只在没有节点时才有「设置订阅」，有节点之后这一行是唯一入口。
+      -->
+      <div v-if="servers.length" class="m-card">
+        <button class="m-row" type="button" data-probe="sub" @click="emit('subscribe')">
+          <span class="k">{{ t('sub.id') }}</span>
+          <span class="v mono">{{ state?.subscriberName || t('sub.none') }}</span>
+          <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+        </button>
+      </div>
+
       <template v-if="servers.length">
         <p class="m-sub">{{ tf('mob.nodesCount', servers.length) }}</p>
 

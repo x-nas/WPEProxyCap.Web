@@ -2,17 +2,18 @@
 /*
   「我的」页（方案 C 的分组设置，放进方案 A 的第四个标签）。
 
-  账号卡（改账号）→ 运行（订阅号 / 分应用代理 / 后台运行受限时才出现 / 系统日志）
-  → 外观（主题 / 语言 / 扫描线，改完立即生效）→ 帮助（教程 · 协议与隐私）→ 底部一行版本号。
+  账号卡（改账号）→ 运行（后台运行受限时才出现 / 系统日志 / 系统信息）
+  → 外观（主题 / 语言 / 扫描线，改完立即生效）→ 帮助（教程 · 协议与隐私）。
 
-  ⚠️ 2026-09-15 起<b>尽量一屏放下</b>（用户要求）：去掉了订阅服务器状态 / 更新时间 / 节点数这组订阅信息、
-  开源代码入口、底部版权，分组小标题也不要了（三张卡片本身就是分组）；行高收到 42。
-  订阅号那一行留着 —— 有节点之后，那是改订阅号的唯一入口（弹层里有完整的订阅信息）。
+  ⚠️ 2026-09-15 起<b>尽量一屏放下</b>（用户要求）：去掉了订阅信息组、开源代码入口、底部版权与分组小标题；
+  同日再去掉「订阅号」「分应用代理」两行（用户要求）—— 分应用代理在加速页（未连接时）有入口，
+  订阅号的入口挪到「节点」页顶部（加速页只在没有节点时才有「设置订阅」，有节点之后那是唯一入口，别再删）。
+  版本 / 内核 / 系统 / 机型 / WebView 收进「系统信息」底部弹层。
   平板宽屏两列。主题与语言用底部弹层选（原来的「软件设置」弹窗手机上不再用）。
 */
 import { computed, onMounted, ref } from 'vue'
-import { api, type AppProxy, type AppState, type PlatformInfo } from '../../api'
-import { lang, setLang, t, tf } from '../../i18n'
+import { api, type AppState, type PlatformInfo } from '../../api'
+import { lang, setLang, t } from '../../i18n'
 import { LANGS, type Lang } from '../../i18n/langs'
 import { scanLine, setScan, setTheme, theme, type Theme } from '../../stores/theme'
 import BottomSheet from './BottomSheet.vue'
@@ -20,13 +21,10 @@ import BottomSheet from './BottomSheet.vue'
 const props = defineProps<{
   state: AppState | null
   platform: PlatformInfo | null
-  appProxy: AppProxy | null
 }>()
 
 const emit = defineEmits<{
   (e: 'account'): void
-  (e: 'subscribe'): void
-  (e: 'apps'): void
   (e: 'battery'): void
   (e: 'log'): void
   (e: 'agreement', type: 'UserAgreement' | 'PrivacyPolicy'): void
@@ -38,6 +36,7 @@ onMounted(() => { api.getMihomoVersion().then((v) => { kernel.value = v }).catch
 
 const themeOpen = ref(false)
 const langOpen = ref(false)
+const infoOpen = ref(false)
 
 const THEMES: Array<{ id: Theme; k: 'set.dark' | 'set.light' | 'set.system' }> = [
   { id: 'dark', k: 'set.dark' },
@@ -48,11 +47,14 @@ const THEMES: Array<{ id: Theme; k: 'set.dark' | 'set.light' | 'set.system' }> =
 const themeLabel = computed(() => t(THEMES.find((x) => x.id === theme.value)?.k ?? 'set.dark'))
 const langLabel = computed(() => LANGS.find((l) => l.code === lang.value)?.label ?? '')
 
-const appsText = computed(() => {
-  const p = props.appProxy
-  if (!p || p.mode === 'all') return t('mob.appsAll')
-  return tf('mob.appsSel', p.packages.length)
-})
+/* 系统信息弹层的几行：取不到的写短横（开发构建里没有宿主时 platform 为空） */
+const infoRows = computed(() => [
+  { k: t('mob.version'), v: props.state?.version || '—' },
+  { k: t('mob.kernel'), v: kernel.value || '—' },
+  { k: t('mob.os'), v: props.platform?.osVersion || '—' },
+  { k: t('mob.model'), v: props.platform?.model || '—' },
+  { k: 'WebView', v: props.platform?.webViewMajor ? String(props.platform.webViewMajor) : '—' },
+])
 
 function pickTheme(id: Theme): void {
   setTheme(id)
@@ -83,16 +85,6 @@ function pickLang(code: Lang): void {
 
       <div class="groups">
         <div class="m-card">
-          <button class="m-row" type="button" data-probe="sub" @click="emit('subscribe')">
-            <span class="k">{{ t('sub.id') }}</span>
-            <span class="v mono">{{ state?.subscriberName || t('sub.none') }}</span>
-            <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
-          </button>
-          <button class="m-row" type="button" data-probe="apps" @click="emit('apps')">
-            <span class="k">{{ t('mob.apps') }}</span>
-            <span class="v">{{ appsText }}</span>
-            <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
-          </button>
           <!-- 后台运行只在受限时出现（不受限时这一行没有可做的事；受限的说明在加速页顶部的提示条上） -->
           <button v-if="platform?.batteryOptimized" class="m-row" type="button" @click="emit('battery')">
             <span class="k">{{ t('mob.battery') }}</span>
@@ -101,6 +93,11 @@ function pickLang(code: Lang): void {
           </button>
           <button class="m-row" type="button" data-probe="log" @click="emit('log')">
             <span class="k">{{ t('win.log') }}</span>
+            <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+          </button>
+          <button class="m-row" type="button" data-probe="info" @click="infoOpen = true">
+            <span class="k">{{ t('mob.sysInfo') }}</span>
+            <span class="v mono">V {{ state?.version || '—' }}</span>
             <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
           </button>
         </div>
@@ -135,9 +132,17 @@ function pickLang(code: Lang): void {
           </div>
         </div>
       </div>
-
-      <p class="ver">{{ t('mob.version') }} {{ state?.version || '—' }}<template v-if="kernel"> · {{ t('mob.kernel') }} {{ kernel }}</template></p>
     </div>
+
+    <BottomSheet v-model:open="infoOpen" :title="t('mob.sysInfo')">
+      <div class="m-card info">
+        <div v-for="r in infoRows" :key="r.k" class="m-row">
+          <span class="k">{{ r.k }}</span>
+          <!-- 内核版本串很长（Mihomo Meta v1.19.21 android arm64），允许折行、不截断，长按可复制 -->
+          <span class="v mono wrap">{{ r.v }}</span>
+        </div>
+      </div>
+    </BottomSheet>
 
     <BottomSheet v-model:open="themeOpen" :title="t('mob.theme')">
       <div class="m-card opts" role="radiogroup" :aria-label="t('mob.theme')">
@@ -173,14 +178,15 @@ function pickLang(code: Lang): void {
 
 .groups { display: flex; flex-direction: column; gap: 8px; }
 
-/* 行高 52 → 40：设置列表一屏放下（外层 .m-row 是 mobile.css 的共用件，这里只收本页）；360×566 下后台运行受限时九行也放得下 */
+/* 行高 52 → 40：设置列表一屏放下（外层 .m-row 是 mobile.css 的共用件，这里只收本页） */
 .groups .m-row { min-height: 40px; padding-top: 5px; padding-bottom: 5px; }
 
 .legal { gap: 8px; }
 .legal .m-link { padding: 6px 0; font-size: var(--fs-body); }
 .legal i { font-style: normal; color: var(--dim); }
 
-.ver { margin: 2px 0 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; font-family: var(--mono); font-size: var(--fs-caption); color: var(--dim); }
+/* 系统信息：值允许折行（内核版本串很长），可以长按选中复制 */
+.info .v.wrap { max-width: 64%; white-space: normal; overflow-wrap: anywhere; text-overflow: clip; user-select: text; }
 
 .opts .tick { width: 22px; height: 22px; color: var(--cyan); stroke-width: 2.4; }
 .opts .short { width: 28px; font-family: var(--share); font-size: var(--fs-caption); letter-spacing: .1em; color: var(--muted); }

@@ -282,8 +282,8 @@ const TABS: Array<{ id: Tab; k: Key; d: string }> = [
 
           <MeTab
             v-show="tab === 'me'"
-            :state="state" :platform="platform" :app-proxy="appProxy"
-            @account="accountSheet = true" @subscribe="subscribeSheet = true" @apps="appsOpen = true"
+            :state="state" :platform="platform"
+            @account="accountSheet = true"
             @battery="fixBattery" @log="logOpen = true" @agreement="openAgreement"
             @tutorial="open(site('tutorial.html#wpc-android'))" />
         </main>

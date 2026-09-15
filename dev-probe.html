@@ -237,8 +237,9 @@
           rules: '[data-probe="rules"]',       // 「不会代理任何流量」的说明（要配 &rules=none）
           verify: '[data-probe="verify"]',     // 要配 view=cc
           cut: '[data-probe="cut"]',           // 断开确认（要配 view=cc）
-          sub: '.me [data-probe="sub"]',       // 订阅设置（配 &tab=me）
+          sub: '[data-probe="sub"]',           // 订阅设置（节点页顶部的订阅号一行，配 &tab=nodes；2026-09-15 从「我的」页挪过去）
           log: '.me [data-probe="log"]',       // 系统日志（配 &tab=me）
+          info: '.me [data-probe="info"]',     // 系统信息（配 &tab=me）
           theme: '.me [data-probe="theme"]',   // 主题（配 &tab=me）
           lang: '.me [data-probe="lang"]',     // 语言（配 &tab=me）
         } : {
