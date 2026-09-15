@@ -85,7 +85,10 @@ export interface LogItem {
 
 export interface VerifyResult {
   success: boolean
+  /** 中文原文（日志用；老版本宿主只给这一项） */
   error: string
+  /** 结果代码，界面按它翻译（VerifyModal 的 RESULT 表） */
+  code?: string
 }
 
 export const api = {

@@ -102,7 +102,7 @@
             return true
           },
           disconnect: function () { STATE.isConnected = false; emit('disconnected', null); return true },
-          verifyProxy: function () { return { success: true, error: '代理服务器正常，账号密码验证通过' } },
+          verifyProxy: function () { return { success: true, error: '代理服务器连接正常，账号密码安全验证已通过', code: 'ok' } },
           pauseOnlineTime: function () { return true },
           resumeOnlineTime: function () { return true },
           openExternal: function (a) { console.log('[probe] openExternal', a.url); return true },

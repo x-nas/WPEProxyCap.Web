@@ -11,8 +11,41 @@
 import { ref, watch } from 'vue'
 import { on } from '../bridge'
 import { api } from '../api'
-import { t } from '../i18n'
+import { t, type Key } from '../i18n'
 import CyberModal from './CyberModal.vue'
+
+/*
+  ⚠️ 结果与进度都按<b>代码</b>翻译（2026-09-15 起两个宿主只发代码）：以前宿主直接发中文句子，
+  英文 / 日文等界面上的验证结果照样是中文。表里没有的代码（老版本宿主发来的原文）原样显示。
+  两边的代码表：Windows ProxyService.VerifyProxyAsync / TestSocks5ProxyAsync / RegisterKey，
+  Android ProxyService.verifyProxy / testSocks5 / registerKey。
+*/
+const PROGRESS: Record<string, Key> = {
+  server: 'vf.p.server',
+  handshake: 'vf.p.handshake',
+  auth: 'vf.p.auth',
+  device: 'vf.p.device',
+}
+
+const RESULT: Record<string, Key> = {
+  noServer: 'vf.r.noServer',
+  ok: 'vf.r.ok',
+  okDevice: 'vf.r.okDevice',
+  live: 'vf.r.live',
+  timeout: 'vf.r.timeout',
+  noSocks5: 'vf.r.noSocks5',
+  noUser: 'vf.r.noUser',
+  badAuth: 'vf.r.badAuth',
+  badMethod: 'vf.r.badMethod',
+  unavailable: 'vf.r.unavailable',
+  expired: 'vf.r.expired',
+  disabled: 'vf.r.disabled',
+  deviceLimit: 'vf.r.deviceLimit',
+  authOff: 'vf.r.authOff',
+  badRequest: 'vf.r.badRequest',
+  regTimeout: 'vf.r.regTimeout',
+  protocol: 'vf.r.protocol',
+}
 
 const props = defineProps<{ open: boolean }>()
 const emit = defineEmits<{ (e: 'update:open', v: boolean): void }>()
@@ -36,12 +69,12 @@ watch(() => props.open, async (v) => {
   progress.value = t('vf.wait')
   resultText.value = ''
 
-  offProgress = on('verifyProgress', (s: string) => { if (id === runId) progress.value = s })
+  offProgress = on('verifyProgress', (s: string) => { if (id === runId) progress.value = PROGRESS[s] ? t(PROGRESS[s]) : s })
 
   try {
     const r = await api.verifyProxy()
     if (id !== runId) return
-    resultText.value = r.error
+    resultText.value = r.code && RESULT[r.code] ? t(RESULT[r.code]) : r.error
     phase.value = r.success ? 'success' : 'fail'
   } catch (e) {
     if (id !== runId) return
