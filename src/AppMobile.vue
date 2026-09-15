@@ -1,30 +1,47 @@
 <script setup lang="ts">
 /*
-  手机版外壳（WPEProxyCap.Android）—— 顶栏 + 一整条可滚动的竖屏页 + 页脚。
+  手机版外壳（WPEProxyCap.Android）—— 2026-09-15 按「方案 A」整体重做。
 
-  与 Windows 版 App.vue 的分工一模一样（同一套桥事件、同一套弹窗、同一份 i18n / 主题），差在：
-    · 没有窗口：没有自绘标题栏上的拖动 / 最小化 / 最大化 / 置顶 / 退出，顶栏只留「系统日志」与「软件设置」；
-      退出就是系统的返回键 —— 有弹窗时先关弹窗，没有弹窗时原生侧把应用退到后台（VPN 在前台服务里继续跑）；
-    · 骨架是竖着的 MobileHome / MobileControl，零件与 Windows 共用；
-    · 多一张 DEVICE 卡：分应用代理、后台运行（电池优化）。
+  结构：首次使用走引导（订阅号 → 账号），之后是四个标签：
+    加速（节点卡 + 反应堆核心 / 已连接时的计时与读数）· 节点 · 消息 · 我的（方案 C 的分组设置）
+  手机宽度（< 600px）标签栏在底部；平板与横屏（≥ 600px）变成左侧导航栏，各页在 ≥ 840px 时分两栏。
+
+  与 Windows 版 App.vue 共用：桥事件、登录逻辑 useLoginForm（这里只建一份，provide 给各页）、
+  控制中心逻辑 useControlPanel、系统日志 / 安全验证 / 协议 / 分应用代理几个弹窗、i18n、主题。
+  不再共用：MainView / ControlCenter 的骨架与 home.css / control.css（电脑版的三舱布局）。
+
+  系统返回键（原生侧调 window.__wpcBack）：弹窗 / 弹层 → 页内层级（消息详情、引导第二步）
+  → 回到「加速」页 → 都没有才交还系统（退到后台，VPN 在前台服务里继续跑）。
   状态栏、刘海、手势条的留白由原生侧按 WindowInsets 给 WebView 加内边距，这里不用 env(safe-area-inset-*)。
 */
-import { computed, onMounted, onUnmounted, ref, watchEffect } from 'vue'
+import { computed, onMounted, onUnmounted, provide, ref, watchEffect } from 'vue'
 import { inHost, on } from './bridge'
 import { api, type AppState, type ServerInfo, type NoticeInfo, type LiveStats, type LogItem, type AppProxy, type PlatformInfo } from './api'
 import { defOf, lang, t, isEn, initLang, type Key } from './i18n'
 import { initTheme } from './stores/theme'
 import { pushToast } from './stores/toast'
+import { unreadCount, readKeys } from './stores/inbox'
 import { anyModalOpen, closeTopModal } from './useModal'
-import MobileHome from './components/mobile/MobileHome.vue'
-import MobileControl from './components/mobile/MobileControl.vue'
+import { popBack } from './useBackStack'
+import { useLoginForm } from './components/useLoginForm'
+import { LOGIN } from './components/mobile/inject'
+import './components/mobile/mobile.css'
+import Onboard from './components/mobile/Onboard.vue'
+import BoostTab from './components/mobile/BoostTab.vue'
+import NodesTab from './components/mobile/NodesTab.vue'
+import InboxTab from './components/mobile/InboxTab.vue'
+import MeTab from './components/mobile/MeTab.vue'
+import NodeList from './components/mobile/NodeList.vue'
+import BottomSheet from './components/mobile/BottomSheet.vue'
+import AccountSheet from './components/mobile/AccountSheet.vue'
+import SubscribeSheet from './components/mobile/SubscribeSheet.vue'
 import AppPicker from './components/mobile/AppPicker.vue'
-import SubscriberModal from './components/SubscriberModal.vue'
 import LogModal from './components/LogModal.vue'
 import VerifyModal from './components/VerifyModal.vue'
 import AgreementModal from './components/AgreementModal.vue'
-import AppSetting from './components/AppSetting.vue'
 import ToastStack from './components/ToastStack.vue'
+
+type Tab = 'boost' | 'nodes' | 'inbox' | 'me'
 
 const state = ref<AppState | null>(null)
 const servers = ref<ServerInfo[]>([])
@@ -36,14 +53,26 @@ const stats = ref<LiveStats | null>(null)
 const logs = ref<LogItem[]>([])
 const platform = ref<PlatformInfo | null>(null)
 const appProxy = ref<AppProxy | null>(null)
+const delays = ref<Record<string, number>>({})
+const testing = ref(false)
+const loaded = ref(false)
+const onboardDone = ref(false)
 
-const subscriberOpen = ref(false)
+const tab = ref<Tab>('boost')
+// 探针页截图用：?tab=nodes|inbox|me（只在开发构建里认）
+if (import.meta.env.DEV) {
+  const want = new URLSearchParams(location.search).get('tab')
+  if (want === 'nodes' || want === 'inbox' || want === 'me') tab.value = want
+}
+
+const nodeSheet = ref(false)
+const accountSheet = ref(false)
+const subscribeSheet = ref(false)
 const agreementOpen = ref(false)
 const agreementTitle = ref('')
 const agreementText = ref('')
 const logOpen = ref(false)
 const verifyOpen = ref(false)
-const appSetOpen = ref(false)
 const appsOpen = ref(false)
 
 /* 最近一次连接失败的具体原因（原生侧在返回 false 之前推 connectError），login 取走一次就清空 */
@@ -55,11 +84,10 @@ function takeFail(): Key | null {
   return k
 }
 
-const offs: Array<() => void> = []
+const form = useLoginForm(() => state.value, () => servers.value, takeFail)
+provide(LOGIN, form)
 
-const selectedServer = computed(() =>
-  servers.value.find((s) => s.serverId === state.value?.selectedServerId) ?? servers.value[0] ?? null)
-const selectedServerName = computed(() => selectedServer.value?.serverName ?? '')
+const offs: Array<() => void> = []
 
 /* ⚠️ 映射表必须覆盖每一个取值（与 App.vue 同一张），第五种「还没测出来」走 checking */
 const NET: Record<string, { k: Key; c: string }> = {
@@ -71,6 +99,31 @@ const NET: Record<string, { k: Key; c: string }> = {
 
 const net = computed(() => NET[wpeStatus.value] ?? { k: 'win.net.checking' as Key, c: 'm' })
 
+const unread = computed(() => {
+  void readKeys.value
+  return unreadCount(notices.value)
+})
+
+/* 没有订阅号或没有账号就先走引导；已经连着（「始终开启的 VPN」在后台连上的）不打断 */
+const onboarding = computed(() =>
+  inHost && loaded.value && !onboardDone.value && !connected.value &&
+  (!state.value?.subscriberName || !state.value?.userName))
+
+async function testDelays(): Promise<void> {
+  if (!servers.value.length) { delays.value = {}; return }
+  testing.value = true
+  try {
+    const list = await api.testServerDelays()
+    const next: Record<string, number> = {}
+    list.forEach((x) => { next[x.serverId] = x.delay })
+    delays.value = next
+  } catch (e) {
+    console.error('[mobile] 节点测速失败', e)
+  } finally {
+    testing.value = false
+  }
+}
+
 async function refreshNetwork(): Promise<void> {
   try {
     wpeStatus.value = await api.checkWpeServer()
@@ -80,6 +133,7 @@ async function refreshNetwork(): Promise<void> {
   } catch (e) {
     console.error('[mobile] 取订阅数据失败', e)
   }
+  void testDelays()
 }
 
 async function refreshDevice(): Promise<void> {
@@ -101,12 +155,11 @@ async function refreshAll(): Promise<void> {
   await refreshNetwork()
 }
 
-/*
-  系统返回键。原生侧（MainActivity 的 OnBackPressedCallback）调 window.__wpcBack()：
-  返回 true = 前端消费掉了（关了一个弹窗）；false = 没有弹窗开着，原生把应用退到后台。
-*/
 function onBack(): boolean {
-  return closeTopModal()
+  if (closeTopModal()) return true
+  if (popBack()) return true
+  if (!onboarding.value && tab.value !== 'boost') { tab.value = 'boost'; return true }
+  return false
 }
 
 onMounted(async () => {
@@ -119,6 +172,8 @@ onMounted(async () => {
   offs.push(on('stats', (d: LiveStats) => (stats.value = d)))
   offs.push(on('log', (d: LogItem) => { logs.value.push(d); if (logs.value.length > 200) logs.value.shift() }))
   offs.push(on('connectError', (d: { reason: string }) => { lastFail.value = d?.reason === 'vpn' ? 'mob.vpnDenied' : null }))
+  // 连接时发现节点在手机上一条走代理的规则都没有（原生侧在生成配置时判）
+  offs.push(on('rulesNoProxy', () => pushToast('warning', t('mob.noProxyToast'))))
   // 应用回到前台（从系统设置、电池优化页回来）：权限状态可能变了
   offs.push(on('resume', () => { refreshDevice() }))
 
@@ -131,6 +186,8 @@ onMounted(async () => {
     initTheme(s.themeMode, s.isDark, s.scanLine)
   } catch (e) {
     console.error('[mobile] 取初始状态失败', e)
+  } finally {
+    loaded.value = true
   }
 
   await refreshDevice()
@@ -186,6 +243,25 @@ function onAppsSaved(): void {
   refreshDevice()
   pushToast('success', t(connected.value ? 'mob.appsNext' : 'mob.appsSaved'))
 }
+
+async function onOnboardDone(): Promise<void> {
+  onboardDone.value = true
+  tab.value = 'boost'
+  await refreshAll()
+}
+
+function chooseNode(id: string): void {
+  if (connected.value) { pushToast('info', t('mob.nodeLocked')); return }
+  form.chooseServer(id)
+  nodeSheet.value = false
+}
+
+const TABS: Array<{ id: Tab; k: Key; d: string }> = [
+  { id: 'boost', k: 'mob.tabBoost', d: 'M13 2L4 14h7l-1 8 9-12h-7z' },
+  { id: 'nodes', k: 'mob.tabNodes', d: 'M12 3a9 9 0 1 0 0 18a9 9 0 1 0 0-18zM3 12h18M12 3c3.2 3 3.2 15 0 18M12 3c-3.2 3-3.2 15 0 18' },
+  { id: 'inbox', k: 'mob.tabInbox', d: 'M6 16v-5a6 6 0 0 1 12 0v5l2 2H4zM10 20a2 2 0 0 0 4 0' },
+  { id: 'me', k: 'mob.tabMe', d: 'M12 4a4 4 0 1 0 0 8a4 4 0 1 0 0-8zM4 21c1-4 4-6 8-6s7 2 8 6' },
+]
 </script>
 
 <template>
@@ -193,78 +269,63 @@ function onAppsSaved(): void {
     <div class="pcb" />
     <div class="scan" />
 
-    <div class="mshell" :inert="anyModalOpen">
-      <header class="mbar">
-        <div class="brand">
-          <span class="bname">WPE <small>PROXY CAP</small></span>
-          <span class="bver">V {{ state?.version || '—' }}</span>
-        </div>
+    <div class="mshell" :class="{ solo: !inHost || onboarding }" :inert="anyModalOpen">
+      <div v-if="!inHost" class="nohost">{{ t('win.nohost') }}</div>
 
-        <div class="acts">
-          <button class="wb" :aria-label="t('win.log')" @click="logOpen = true">
-            <svg class="ico" viewBox="0 0 24 24">
-              <rect x="4" y="3" width="16" height="18" rx="1" /><path d="M8 8h8M8 12h8M8 16h5" />
-            </svg>
+      <Onboard v-else-if="onboarding" :state="state" :refresh="refreshAll" @agreement="openAgreement" @done="onOnboardDone" />
+
+      <template v-else>
+        <main class="stage">
+          <BoostTab
+            v-show="tab === 'boost'"
+            :state="state" :servers="servers" :delays="delays" :stats="stats" :connected="connected"
+            :platform="platform" :app-proxy="appProxy" :refresh="refreshAll"
+            @nodes="nodeSheet = true" @apps="appsOpen = true" @account="accountSheet = true"
+            @subscribe="subscribeSheet = true" @verify="verifyOpen = true" @battery="fixBattery"
+            @rules-help="open(site('tutorial.html#m-rules'))" @disconnected="onDisconnected" />
+
+          <NodesTab
+            v-show="tab === 'nodes'"
+            :state="state" :servers="servers" :delays="delays" :testing="testing" :connected="connected" :refresh="refreshAll"
+            @retest="testDelays" @subscribe="subscribeSheet = true" @choose="chooseNode" />
+
+          <InboxTab v-show="tab === 'inbox'" :notices="notices" :visible="tab === 'inbox'" :refresh="refreshNetwork" @open="open" />
+
+          <MeTab
+            v-show="tab === 'me'"
+            :state="state" :servers="servers" :platform="platform" :app-proxy="appProxy"
+            :net-text="t(net.k)" :net-tone="net.c" :sub-delay="subDelay"
+            @account="accountSheet = true" @subscribe="subscribeSheet = true" @apps="appsOpen = true"
+            @battery="fixBattery" @log="logOpen = true" @agreement="openAgreement"
+            @tutorial="open(site('tutorial.html#wpc-android'))" @open="open" />
+        </main>
+
+        <nav class="nav" :aria-label="t('mob.tabBoost')">
+          <button
+            v-for="x in TABS" :key="x.id"
+            class="nb" :class="{ on: tab === x.id }" type="button" :data-tab="x.id"
+            :aria-current="tab === x.id ? 'page' : undefined"
+            @click="tab = x.id"
+          >
+            <svg class="ico" viewBox="0 0 24 24" aria-hidden="true"><path :d="x.d" /></svg>
+            <span>{{ t(x.k) }}</span>
+            <b v-if="x.id === 'inbox' && unread" class="badge">{{ unread > 99 ? '99+' : unread }}</b>
           </button>
-          <!-- 齿轮画布 32 + 描边 2.667，与 Windows 标题栏那颗同一对参数（见 App.vue） -->
-          <button class="wb gear" :class="{ on: appSetOpen }" :aria-label="t('win.set')" @click="appSetOpen = true">
-            <svg class="ico" viewBox="-4 -4 32 32">
-              <circle cx="12" cy="12" r="3.2" />
-              <path d="M19.4 15a1.6 1.6 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.6 1.6 0 0 0-1.8-.3 1.6 1.6 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1A1.6 1.6 0 0 0 9 19.4a1.6 1.6 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.6 1.6 0 0 0 .3-1.8 1.6 1.6 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1A1.6 1.6 0 0 0 4.6 9a1.6 1.6 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.6 1.6 0 0 0 1.8.3H9a1.6 1.6 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.6 1.6 0 0 0 1 1.5 1.6 1.6 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.6 1.6 0 0 0-.3 1.8V9a1.6 1.6 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.6 1.6 0 0 0-1.5 1z" />
-            </svg>
-          </button>
-        </div>
-      </header>
-
-      <main class="mscroll">
-        <div v-if="!inHost" class="nohost">{{ t('win.nohost') }}</div>
-
-        <template v-else>
-          <MobileControl
-            v-if="connected"
-            :stats="stats"
-            :server-name="selectedServerName"
-            :notices="notices"
-            @verify="verifyOpen = true"
-            @disconnected="onDisconnected" />
-
-          <MobileHome
-            v-else
-            :state="state"
-            :servers="servers"
-            :notices="notices"
-            :net-text="t(net.k)"
-            :net-tone="net.c"
-            :sub-delay="subDelay"
-            :app-proxy="appProxy"
-            :platform="platform"
-            :fail-key="takeFail"
-            @subscribe="subscriberOpen = true"
-            @apps="appsOpen = true"
-            @battery="fixBattery" />
-        </template>
-
-        <footer class="mfoot">
-          <div class="srv">
-            <span class="dot" :class="{ off: subDelay < 0 }" />
-            <span class="lb">{{ t('foot.server') }}</span>
-            <span class="addr">{{ state?.subscriberName || '—' }}</span>
-            <span class="sep">//</span>
-            <span :class="subDelay < 0 ? 'off-t' : 'on'">{{ subDelay < 0 ? t('foot.unreachable') : subDelay + ' ms' }}</span>
-          </div>
-          <nav class="links">
-            <a @click="openAgreement('UserAgreement')">{{ t('foot.agreement') }}</a>
-            <a @click="openAgreement('PrivacyPolicy')">{{ t('foot.privacy') }}</a>
-            <a @click="open(site('tutorial.html#wpc-android'))">{{ t('foot.tutorial') }}</a>
-            <a @click="open('https://github.com/x-nas/WPEProxyCap.Android')">{{ t('mob.source') }}</a>
-          </nav>
-          <a class="copy" @click="open('https://www.wpe64.com')">© 2026 Winsock Packet Editor</a>
-        </footer>
-      </main>
+        </nav>
+      </template>
     </div>
 
-    <SubscriberModal
-      v-model:open="subscriberOpen"
+    <BottomSheet v-model:open="nodeSheet" :title="t('mob.tabNodes')">
+      <template #action>
+        <button class="m-chipbtn" type="button" :disabled="testing" @click="testDelays">{{ testing ? t('mob.testing') : t('mob.retest') }}</button>
+      </template>
+      <NodeList :servers="servers" :selected-id="form.selectedId.value" :delays="delays" @choose="chooseNode" />
+    </BottomSheet>
+
+    <AccountSheet v-model:open="accountSheet" />
+
+    <SubscribeSheet
+      v-model:open="subscribeSheet"
       :subscriber-name="state?.subscriberName ?? null"
       :subscriber-time="state?.subscriberTime ?? null"
       @updated="refreshAll" />
@@ -275,8 +336,6 @@ function onAppsSaved(): void {
     <VerifyModal v-model:open="verifyOpen" />
 
     <AgreementModal v-model:open="agreementOpen" :title="agreementTitle" :text="agreementText" />
-
-    <AppSetting v-model:open="appSetOpen" />
 
     <AppPicker v-model:open="appsOpen" @saved="onAppsSaved" />
 
@@ -299,115 +358,85 @@ function onAppsSaved(): void {
   z-index: 10;
   flex: 1;
   min-height: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  /* ⚠️ 列宽必须写 minmax(0, 1fr)：默认的 auto 列会被横向滚动的内容（消息页的筛选胶囊）撑宽，整屏跟着溢出、底部标签被挤出屏幕 */
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr) auto;
 }
 
-/* ── 顶栏 ─────────────────────────────── */
-.mbar {
-  position: relative;
-  z-index: 20;
-  height: 52px;
-  flex: none;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 4px 0 16px;
-  background: rgb(var(--chrome-rgb) / 88%);
-  border-bottom: 1px solid var(--border);
+.mshell.solo { display: block; }
+
+.stage { position: relative; min-height: 0; }
+.stage > * { height: 100%; }
+
+/* ── 底部标签栏 ─────────────────────────────── */
+.nav {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  height: 62px;
+  border-top: 1px solid var(--border);
+  background: rgb(var(--chrome-rgb) / 94%);
   user-select: none;
 }
 
-.brand { display: flex; align-items: center; gap: 10px; min-width: 0; }
-
-.bname {
-  font-family: var(--orbit);
-  font-weight: 800;
-  font-size: 16px;
-  letter-spacing: -.02em;
-  color: var(--green);
-  white-space: nowrap;
-}
-
-.bname small { font-size: inherit; font-weight: 500; color: var(--muted); }
-
-.bver {
-  font-family: var(--share);
-  font-size: var(--label-size);
-  line-height: 1;
-  letter-spacing: .16em;
-  color: var(--muted);
-  border-left: 1px solid var(--border);
-  padding-left: 10px;
-  white-space: nowrap;
-}
-
-.acts { display: flex; align-items: center; }
-
-/* 触屏：图标按钮 48×48，比 Windows 标题栏的 44×46 再大一点 */
-.wb {
-  width: 48px;
-  height: 48px;
-  flex: none;
-  border: 0;
-  background: transparent;
-  color: var(--muted);
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.wb:active { color: var(--green); background: rgb(var(--green-rgb) / 8%); }
-.wb:focus-visible { outline-offset: -4px; }
-.wb.gear .ico { stroke: var(--cyan); stroke-width: 2.667; }
-.wb.gear.on, .wb.gear:active { color: var(--cyan); background: rgb(var(--cyan-rgb) / 8%); }
-
-/* ── 滚动区 ─────────────────────────────── */
-.mscroll {
-  flex: 1;
-  min-height: 0;
-  overflow-y: auto;
-  overscroll-behavior: contain;
-  -webkit-overflow-scrolling: touch;
-  /*
-    手机上的滚动条本来就是覆盖式的（不占宽度）；桌面 Chromium 调试时是经典滚动条，会吃掉 10px，
-    整页内容因此偏左 5px、与真机对不上。这里统一藏掉，探针页与真机同一个宽度。
-  */
-  scrollbar-width: none;
-}
-
-.mscroll::-webkit-scrollbar { display: none; }
-
-/* ── 页脚 ─────────────────────────────── */
-.mfoot {
+.nb {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px 20px;
-  font-family: var(--share);
-  font-size: var(--label-size);
-  line-height: 1;
-  letter-spacing: .14em;
-  text-transform: uppercase;
+  justify-content: center;
+  gap: 3px;
+  padding: 0;
+  border: 0;
+  background: transparent;
   color: var(--muted);
+  font-family: var(--m-sans);
+  font-size: var(--fs-caption);
+  cursor: pointer;
 }
 
-.srv { display: flex; align-items: center; justify-content: center; gap: 8px; max-width: 100%; }
-.srv .lb { white-space: nowrap; }
-.srv .addr { min-width: 0; color: var(--cyan); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.srv .sep { color: var(--border); }
-.srv .on { color: var(--green); white-space: nowrap; }
-.srv .off-t { color: var(--muted); white-space: nowrap; }
-.srv .dot { width: 7px; height: 7px; flex: none; background: var(--green); box-shadow: 0 0 6px var(--green); }
-.srv .dot.off { background: var(--muted); box-shadow: none; }
+.nb .ico { width: 24px; height: 24px; }
+.nb.on { color: var(--green); }
+.nb.on::before { content: ""; position: absolute; top: 0; left: 30%; right: 30%; height: 2px; background: var(--green); box-shadow: 0 0 8px var(--green); }
+.nb:focus-visible { outline-offset: -4px; }
 
-.links { display: flex; flex-wrap: wrap; justify-content: center; gap: 4px 0; }
-.links a { padding: 8px 10px; color: var(--muted); text-decoration: none; cursor: pointer; white-space: nowrap; }
-.links a:active { color: var(--green); }
+.badge {
+  position: absolute;
+  top: 6px;
+  left: calc(50% + 6px);
+  min-width: 18px;
+  height: 18px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--danger);
+  color: #fff;
+  font-family: var(--mono);
+  font-size: var(--fs-caption);
+  font-weight: 600;
+  line-height: 18px;
+  text-align: center;
+}
 
-.copy { color: var(--dim2); text-decoration: none; cursor: pointer; }
+/* ── 平板 / 横屏：左侧导航栏 ─────────────────────────────── */
+@media (min-width: 600px) {
+  .mshell:not(.solo) { grid-template-rows: minmax(0, 1fr); grid-template-columns: 92px minmax(0, 1fr); }
+  .nav {
+    grid-row: 1;
+    grid-column: 1;
+    grid-auto-flow: row;
+    grid-auto-rows: 76px;
+    grid-auto-columns: auto;
+    align-content: start;
+    height: auto;
+    padding-top: 20px;
+    border-top: 0;
+    border-right: 1px solid var(--border);
+  }
+  .stage { grid-row: 1; grid-column: 2; }
+  .nb.on::before { top: 20%; bottom: 20%; left: 0; right: auto; width: 3px; height: auto; }
+  .badge { top: 10px; }
+}
 
 .nohost {
   min-height: 60vh;

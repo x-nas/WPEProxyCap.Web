@@ -51,18 +51,20 @@
         ]
 
         var SERVERS = empty ? [] : [
-          { serverId: 's1', serverName: '华东一区 · 上海 BGP', serverIP: '10.172.190.252', serverPort: 1080, forgotURL: 'www.wpe64.com/forgot', registerURL: 'www.wpe64.com/reg', verifyURL: 'https://www.wpe64.com/' },
-          { serverId: 's2', serverName: '华南一区 · 广州电信', serverIP: '10.172.190.253', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '' },
-          { serverId: 's3', serverName: '亚太专线 · 新加坡（高级会员专属通道）', serverIP: '10.172.190.254', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '' },
+          // phoneRules 只有 Android 宿主给：s3 在手机上一条走代理的规则都没有（节点列表挂标签）；?rules=none 让选中的 s1 也这样（首页出提示条）
+          { serverId: 's1', serverName: '华东一区 · 上海 BGP', serverIP: '10.172.190.252', serverPort: 1080, forgotURL: 'www.wpe64.com/forgot', registerURL: 'www.wpe64.com/reg', verifyURL: 'https://www.wpe64.com/', phoneRules: q.get('rules') === 'none' ? { total: 2, kept: 1, skipped: 1, proxy: 0 } : { total: 6, kept: 5, skipped: 1, proxy: 3 } },
+          { serverId: 's2', serverName: '华南一区 · 广州电信', serverIP: '10.172.190.253', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '', phoneRules: { total: 4, kept: 4, skipped: 0, proxy: 2 } },
+          { serverId: 's3', serverName: '亚太专线 · 新加坡（高级会员专属通道）', serverIP: '10.172.190.254', serverPort: 1080, forgotURL: '', registerURL: '', verifyURL: '', phoneRules: { total: 3, kept: 1, skipped: 2, proxy: 0 } },
         ]
 
         var STATE = {
           version: '1.0',
           isConnected: view === 'cc',
-          subscriberName: empty ? '' : 'WPC-2026-0912-DEMO',
+          // ?onboard=1 没有订阅号（引导第一步）；?onboard=2 有订阅号没账号（引导第二步）
+          subscriberName: empty || q.get('onboard') === '1' ? '' : 'WPC-2026-0912-DEMO',
           subscriberTime: empty ? null : '2026-09-12 08:40:11',
           selectedServerId: empty ? null : 's1',
-          userName: empty ? '' : 'player_001',
+          userName: empty || q.get('onboard') ? '' : 'player_001',
           password: empty ? '' : 'secret123',
           rememberAccount: true,
           language: q.get('lang') || 'zh-CN',
@@ -93,6 +95,8 @@
           selectServer: function (a) { STATE.selectedServerId = a.serverId; return true },
           connect: function () {
             STATE.isConnected = true
+            var sel = SERVERS.filter(function (s) { return s.serverId === STATE.selectedServerId })[0]
+            if (sel && sel.phoneRules && sel.phoneRules.proxy === 0) setTimeout(function () { emit('rulesNoProxy', { serverName: sel.serverName }) }, 500)
             setTimeout(function () { emit('connected', STATE) }, 700)
             return true
           },
@@ -147,6 +151,10 @@
           HANDLERS.getAppProxy = function () { return APP_PROXY }
           HANDLERS.setAppProxy = function (a) { APP_PROXY = { mode: a.mode, packages: a.packages }; return true }
           HANDLERS.requestIgnoreBattery = function () { return true }
+          // 三档配色 + 一个不通的，排序与信号格都验得到
+          HANDLERS.testServerDelays = function () {
+            return [{ serverId: 's1', delay: 32 }, { serverId: 's2', delay: 118 }, { serverId: 's3', delay: -1 }].filter(function () { return SERVERS.length })
+          }
           HANDLERS.getMihomoVersion = function () { return 'Mihomo Meta v1.19.21 android arm64' }
           HANDLERS.getOsVersion = function () { return 'Android 14 · Xiaomi 23127PN0CC · WebView 138' }
 
@@ -219,13 +227,18 @@
         if (!want) return
 
         var android = new URLSearchParams(location.search).get('platform') === 'android'
+        // 手机版 2.0：各页上的入口带 data-probe；「我的」页那几个要配 &tab=me（v-show 藏起来的页 querySelector 也找得到，但点了没人看见）
         var SEL = (android ? {
-          set: '.mbar .wb.gear',
-          sub: '.subbtn:not(.cy):not(.am)',
-          log: '.mbar .wb:not(.gear)',
-          verify: '.ab:not(.danger)',
-          apps: '.subbtn.cy',          // 手机版 DEVICE 卡的「选择应用」
-          cut: '.ab.danger',           // 断开连接的确认框
+          nodes: '[data-probe="nodes"]',       // 加速页的节点卡 → 节点弹层
+          account: '[data-probe="account"]',   // 账号与密码弹层
+          apps: '[data-probe="apps"]',         // 分应用代理
+          rules: '[data-probe="rules"]',       // 「不会代理任何流量」的说明（要配 &rules=none）
+          verify: '[data-probe="verify"]',     // 要配 view=cc
+          cut: '[data-probe="cut"]',           // 断开确认（要配 view=cc）
+          sub: '.me [data-probe="sub"]',       // 订阅设置（配 &tab=me）
+          log: '.me [data-probe="log"]',       // 系统日志（配 &tab=me）
+          theme: '.me [data-probe="theme"]',   // 主题（配 &tab=me）
+          lang: '.me [data-probe="lang"]',     // 语言（配 &tab=me）
         } : {
           set: '.titlebar .wb.gear',
           sub: '.subbtn',   // 订阅设置在右侧 SUBSCRIPTION 舱底部，标题栏上没有这颗

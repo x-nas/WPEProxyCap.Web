@@ -14,7 +14,6 @@ const OK_VALUE = /^(var\(--fs-(caption|label|small|dense|body|lead|title|num|num
 // [文件（相对 src）, 选择器正则, 为什么]
 const ALLOW = [
   ['App.vue', /^\.bname$/, '标题栏品牌字（与 WPE 同一条例外）'],
-  ['AppMobile.vue', /^\.bname$/, '手机版顶栏品牌字（与 Windows 标题栏同一条例外）'],
   ['components/control.css', /^\.clock$/, '反应堆核心里的计时表，整屏主视觉（Windows 与手机共用，2026-09-14 从 ControlCenter.vue 搬出）'],
 ]
 

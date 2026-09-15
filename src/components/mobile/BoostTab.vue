@@ -1,0 +1,301 @@
+<script setup lang="ts">
+/*
+  「加速」页（手机版 2.0，方案 A）。
+
+  未连接：节点卡（点开节点弹层）→ 反应堆核心（它就是连接按钮）→ 分应用代理 / 账号两行。
+  已连接：计时 + 核心（点按暂停计时）→ 四格读数（上行 / 下行带曲线、延迟、内存）→ 安全验证 / 断开。
+  两种状态下核心的位置不变。平板宽屏（≥ 840px）左边核心、右边卡片。
+
+  顶部两条提示：后台运行受系统限制（一点直达系统设置）；选中的节点在手机上没有走代理的规则
+  （phoneRules.proxy === 0，常见于只按进程名写规则的节点 —— 连上也没有流量经过 WPE）。
+*/
+import { computed, inject, ref } from 'vue'
+import type { AppProxy, AppState, LiveStats, PlatformInfo, ServerInfo } from '../../api'
+import { t, tf } from '../../i18n'
+import ReactorCore from '../ReactorCore.vue'
+import Sparkline from '../Sparkline.vue'
+import { useControlPanel } from '../useControlPanel'
+import BottomSheet from './BottomSheet.vue'
+import LatencyBars from './LatencyBars.vue'
+import PullHint from './PullHint.vue'
+import { LOGIN } from './inject'
+import { latencyTone } from './latency'
+import { usePullRefresh } from './usePullRefresh'
+
+const props = defineProps<{
+  state: AppState | null
+  servers: ServerInfo[]
+  delays: Record<string, number>
+  stats: LiveStats | null
+  connected: boolean
+  platform: PlatformInfo | null
+  appProxy: AppProxy | null
+  refresh: () => Promise<void>
+}>()
+
+const emit = defineEmits<{
+  (e: 'nodes'): void
+  (e: 'apps'): void
+  (e: 'account'): void
+  (e: 'subscribe'): void
+  (e: 'verify'): void
+  (e: 'battery'): void
+  (e: 'rulesHelp'): void
+  (e: 'disconnected'): void
+}>()
+
+const { username, selectedServer, coreTone, busy, login } = inject(LOGIN)!
+
+const {
+  paused, pauseBusy, disconnectOpen, busy: cutBusy, upHist, downHist,
+  delayText, delayTone, upText, downText, memText, todayText, health, healthPct,
+  togglePause, confirmDisconnect,
+} = useControlPanel(() => props.stats, () => emit('disconnected'))
+
+const page = ref<HTMLElement | null>(null)
+const { pull, refreshing } = usePullRefresh(page, () => props.refresh())
+
+const rulesOpen = ref(false)
+
+const selDelay = computed(() => (selectedServer.value ? props.delays[selectedServer.value.serverId] : undefined))
+const noProxy = computed(() => selectedServer.value?.phoneRules?.proxy === 0)
+
+const appsText = computed(() => {
+  const p = props.appProxy
+  if (!p || p.mode === 'all') return t('mob.appsAll')
+  return tf('mob.appsSel', p.packages.length)
+})
+
+function latText(d: number | undefined): string {
+  if (d === undefined) return '—'
+  return d < 0 ? t('mob.timeout') : `${d} ms`
+}
+
+async function cut(): Promise<void> {
+  await confirmDisconnect()
+  disconnectOpen.value = false
+}
+</script>
+
+<template>
+  <div ref="page" class="m-page boost">
+    <PullHint :pull="pull" :refreshing="refreshing" />
+
+    <div class="m-wrap wide">
+      <header class="m-hd">
+        <span class="m-wm">WPC</span>
+        <span v-if="!connected" class="m-pill">{{ busy ? t('home.connecting') : t('mob.idle') }}</span>
+        <span v-else class="m-pill" :class="paused ? 'amber' : 'on'">{{ paused ? t('cc.paused') : t('mob.boosting') }}</span>
+      </header>
+
+      <!-- 两条提示放在最上面（平板上横跨两栏）：放在核心下面时第一屏只露出半截，容易被忽略 -->
+      <div v-if="platform?.batteryOptimized || noProxy" class="notes">
+        <button v-if="platform?.batteryOptimized" class="m-strip warn" type="button" @click="emit('battery')">
+          <svg class="ico" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2" /><path d="M21 10v4" /></svg>
+          <span class="tx">{{ t('mob.batteryWarn') }}</span>
+          <span class="go">{{ t('mob.allow') }}</span>
+        </button>
+
+        <button v-if="noProxy" class="m-strip warn" type="button" data-probe="rules" @click="rulesOpen = true">
+          <svg class="ico" viewBox="0 0 24 24"><path d="M12 3l9 16H3z" /><path d="M12 10v4M12 17h.01" /></svg>
+          <span class="tx">{{ t('mob.noProxyTitle') }}</span>
+          <span class="go">{{ t('mob.details') }}</span>
+        </button>
+      </div>
+
+      <div class="cols">
+        <!-- ── 左栏：核心 ─────────────────────────── -->
+        <section class="col core-col">
+          <div v-if="connected" class="timer-blk">
+            <span class="timer">{{ stats?.onlineTime ?? '00:00:00' }}</span>
+            <span class="where">{{ selectedServer?.serverName || '—' }} · <b :class="'m-' + delayTone">{{ delayText }}</b></span>
+          </div>
+
+          <div class="stage">
+            <button v-if="!connected" class="engage" type="button" data-probe="connect" :disabled="busy || !servers.length"
+                    :aria-label="t('home.login')" @click="login">
+              <ReactorCore :tone="coreTone">
+                <template v-if="busy">
+                  <span class="loader"><i /><i /><i /></span>
+                  <span class="cap">{{ t('home.connecting') }}</span>
+                </template>
+                <template v-else>
+                  <svg class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" /></svg>
+                  <span class="cta">{{ servers.length ? 'START' : 'OFFLINE' }}</span>
+                  <span class="cap">{{ servers.length ? t('mob.start') : t('home.noServer') }}</span>
+                </template>
+              </ReactorCore>
+            </button>
+
+            <button v-else class="engage" type="button" :class="{ paused }" :aria-pressed="paused" :disabled="pauseBusy"
+                    :aria-label="t(paused ? 'cc.resume' : 'cc.pause')" @click="togglePause">
+              <ReactorCore :tone="paused ? 'paused' : 'on'" :progress="health">
+                <svg v-if="!paused" class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" /></svg>
+                <svg v-else class="play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5l11 7-11 7z" /></svg>
+                <span class="cap">{{ t(paused ? 'cc.tapResume' : 'cc.tapPause') }}</span>
+              </ReactorCore>
+            </button>
+          </div>
+
+          <p v-if="connected" class="today">{{ t('cc.today') }} <b>{{ todayText }} · {{ healthPct }}%</b></p>
+        </section>
+
+        <!-- ── 右栏：节点、读数、操作 ─────────── -->
+        <section class="col">
+          <template v-if="!connected">
+            <button v-if="servers.length" class="m-card node" type="button" data-probe="nodes" @click="emit('nodes')">
+              <span class="nm">
+                <span class="m-eb">{{ t('mob.curNode') }}</span>
+                <b>{{ selectedServer?.serverName || '—' }}</b>
+                <span class="lat">
+                  <LatencyBars :ms="selDelay" />
+                  <span :class="'m-' + latencyTone(selDelay)">{{ latText(selDelay) }}</span>
+                </span>
+              </span>
+              <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+            </button>
+
+            <div v-else class="m-card empty">
+              <p>{{ t('mob.noNode') }}</p>
+              <button class="m-btn cy" type="button" @click="emit('subscribe')">{{ t('mob.goSub') }}</button>
+            </div>
+
+            <div class="m-card">
+              <button class="m-row" type="button" data-probe="apps" @click="emit('apps')">
+                <svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" /></svg>
+                <span class="k">{{ t('mob.apps') }}</span>
+                <span class="v">{{ appsText }}</span>
+                <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+              <button class="m-row" type="button" data-probe="account" @click="emit('account')">
+                <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg>
+                <span class="k">{{ t('home.account') }}</span>
+                <span class="v mono">{{ username || t('mob.noAccount') }}</span>
+                <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+            </div>
+          </template>
+
+          <template v-else>
+            <div class="stats">
+              <div class="st">
+                <span class="sk">{{ t('cc.up') }}</span>
+                <span class="sv">{{ upText }}<small>KB/s</small></span>
+                <Sparkline :values="upHist" tone="green" />
+              </div>
+              <div class="st">
+                <span class="sk">{{ t('cc.down') }}</span>
+                <span class="sv">{{ downText }}<small>KB/s</small></span>
+                <Sparkline :values="downHist" tone="cyan" />
+              </div>
+              <div class="st">
+                <span class="sk">{{ t('cc.delay') }}</span>
+                <span class="sv" :class="'m-' + delayTone">{{ delayText }}</span>
+              </div>
+              <div class="st">
+                <span class="sk">{{ t('cc.memory') }}</span>
+                <span class="sv">{{ memText }}<small>MB</small></span>
+              </div>
+            </div>
+
+            <div class="m-card">
+              <button class="m-row" type="button" @click="emit('apps')">
+                <svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" /></svg>
+                <span class="k">{{ t('mob.apps') }}</span>
+                <span class="v">{{ appsText }}</span>
+                <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
+              </button>
+            </div>
+
+            <div class="acts">
+              <button class="m-btn cy" type="button" data-probe="verify" @click="emit('verify')">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.4-3.3 8.2-8 9-4.7-.8-8-4.6-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
+                {{ t('mob.verify') }}
+              </button>
+              <button class="m-btn dg" type="button" data-probe="cut" :disabled="cutBusy" @click="disconnectOpen = true">
+                <svg class="ico" viewBox="0 0 24 24"><path d="M12 3v9" /><path d="M7.3 6.3a8 8 0 1 0 9.4 0" /></svg>
+                {{ t('mob.disconnect') }}
+              </button>
+            </div>
+          </template>
+        </section>
+      </div>
+    </div>
+
+    <BottomSheet v-model:open="disconnectOpen" :title="t('cc.cutAsk')" :busy="cutBusy">
+      <p class="sheet-tx">{{ t('cc.cutDesc') }}</p>
+      <template #footer>
+        <button class="m-btn" type="button" :disabled="cutBusy" @click="disconnectOpen = false">{{ t('dlg.cancel') }}</button>
+        <button class="m-btn dg fill" type="button" :disabled="cutBusy" @click="cut">{{ t('cc.cutOk') }}</button>
+      </template>
+    </BottomSheet>
+
+    <BottomSheet v-model:open="rulesOpen" :title="t('mob.noProxyTitle')">
+      <p class="sheet-tx">{{ t('mob.noProxyDesc') }}</p>
+      <template #footer>
+        <button class="m-btn" type="button" @click="rulesOpen = false">{{ t('dlg.ok') }}</button>
+        <button class="m-btn cy" type="button" @click="rulesOpen = false; emit('rulesHelp')">{{ t('foot.tutorial') }}</button>
+      </template>
+    </BottomSheet>
+  </div>
+</template>
+
+<style scoped>
+.notes { display: flex; flex-direction: column; gap: 10px; margin-top: -6px; }
+.cols { display: flex; flex-direction: column; gap: 14px; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+
+.core-col { align-items: center; }
+
+.stage { width: 100%; height: min(74vw, 300px, 46vh); min-height: 200px; display: grid; place-items: center; }
+
+.engage { height: 100%; aspect-ratio: 1; max-width: 100%; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
+.engage:disabled { cursor: default; }
+.engage:focus-visible { outline: 2px solid var(--cyan); outline-offset: 6px; }
+
+.play { width: 28px; height: 28px; fill: var(--green); stroke: none; }
+.engage.paused .play { fill: var(--amber); }
+.engage:disabled .play { fill: var(--muted); }
+
+.cta { font-family: var(--orbit); font-weight: 700; font-size: var(--fs-lead); letter-spacing: .16em; color: var(--gray); }
+.cap { font-size: var(--fs-small); color: var(--dim2); }
+
+.timer-blk { display: flex; flex-direction: column; align-items: center; gap: 2px; text-align: center; }
+.timer { font-family: var(--orbit); font-weight: 700; font-size: var(--fs-num-lg); line-height: 1.15; font-variant-numeric: tabular-nums; letter-spacing: .02em; }
+.where { font-size: var(--fs-small); color: var(--soft); }
+.where b { font-family: var(--mono); font-weight: 400; }
+
+.today { margin: -4px 0 0; font-size: var(--fs-small); color: var(--dim2); text-align: center; }
+.today b { font-family: var(--mono); font-weight: 400; color: var(--soft); }
+
+.node { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--gray); font: inherit; text-align: left; cursor: pointer; }
+.node .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
+.node b { font-weight: 500; font-size: var(--fs-lead); line-height: 1.4; overflow-wrap: anywhere; }
+.node .lat { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: var(--fs-small); color: var(--dim2); }
+.node .chev { width: 18px; height: 18px; flex: none; color: var(--dim); }
+
+.empty { padding: 18px 16px; display: flex; flex-direction: column; gap: 12px; }
+.empty p { margin: 0; color: var(--soft); }
+
+.stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--m-radius); overflow: hidden; }
+.st { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--card); }
+.sk { font-size: var(--fs-small); color: var(--muted); }
+.sv { font-family: var(--orbit); font-weight: 700; font-size: var(--fs-num); font-variant-numeric: tabular-nums; }
+.sv small { margin-left: 4px; font-family: var(--share); font-weight: 400; font-size: var(--fs-caption); letter-spacing: .08em; color: var(--muted); }
+.st :deep(.spark) { height: 30px; margin-top: 4px; }
+
+.acts { display: flex; gap: 10px; }
+
+.sheet-tx { margin: 0; line-height: 1.7; color: var(--soft); }
+
+@media (min-width: 840px) {
+  .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 28px; }
+  .stage { height: min(380px, 52vh); }
+  .core-col { position: sticky; top: 0; }
+}
+
+/* 横屏手机：高度很矮，核心按高度收 */
+@media (max-height: 480px) {
+  .stage { height: 62vh; min-height: 160px; }
+}
+</style>

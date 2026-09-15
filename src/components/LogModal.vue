@@ -42,11 +42,12 @@ const rows = computed(() => props.logs.map((l, i) => ({ ...l, key: i })).reverse
   ⚠️ 鼠标监听挂在 window 上 —— 快拖时鼠标会跑出那条窄条。宽度不持久化，关掉弹窗再开回默认。
 */
 // 手机竖屏只有三百多像素宽：时间与模块两列收窄，把宽度让给日志内容
-const MD_DEFAULT = isAndroid ? 72 : 112
+// （手机版 2.0 起手机字号放大到 13px，时间「11:26:05」要 78px 才放得下，模块列跟着到 86）
+const MD_DEFAULT = isAndroid ? 86 : 112
 const MD_MIN = 60
 const MD_MAX = 360
 const mdW = ref(MD_DEFAULT)
-const cols = computed(() => ({ gridTemplateColumns: `${isAndroid ? 60 : 78}px ${mdW.value}px 1fr` }))
+const cols = computed(() => ({ gridTemplateColumns: `${isAndroid ? 78 : 78}px ${mdW.value}px 1fr` }))
 
 let dragX = 0
 let dragW = 0

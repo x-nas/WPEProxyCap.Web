@@ -995,3 +995,25 @@ html[data-platform="android"] .tst-wrap {
   align-items: stretch;
 }
 html[data-platform="android"] .tst-wrap .tst { min-width: 0; max-width: none; }
+
+/*
+  手机版 2.0（2026-09-15）：
+  · 手机宽度上，系统日志 / 安全验证 / 协议 / 分应用代理这几个 CyberModal 从底部弹出，
+    与底部弹层 BottomSheet 同一种手感；平板上仍居中。弹窗的内联 width（520 / 560px）由 max-width 收住，不用 !important。
+  · 轻提示抬到底部标签栏之上（标签栏 62px）；平板没有底部标签栏，回到 20px。
+*/
+@media (max-width: 599px) {
+  html[data-platform="android"] .mask { align-items: flex-end; }
+  html[data-platform="android"] .mask > .dlg {
+    max-width: 100vw;
+    max-height: 92vh;
+    border-left: 0;
+    border-right: 0;
+    border-bottom: 0;
+    border-radius: 18px 18px 0 0;
+    overflow: hidden;
+  }
+  html[data-platform="android"] .mask > .dlg .mk { display: none; }
+  html[data-platform="android"] .mask > .box { max-width: 100vw; width: 100%; border-radius: 18px 18px 0 0; }
+  html[data-platform="android"] .tst-wrap { bottom: 78px; }
+}

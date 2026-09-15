@@ -13,6 +13,25 @@ export interface ServerInfo {
   forgotURL: string
   registerURL: string
   verifyURL: string
+  /** 只有 Android 宿主给：这组规则在手机上的概况（进程名规则会被跳过）。proxy 为 0 = 连上也没有流量经过 WPE */
+  phoneRules?: PhoneRules
+}
+
+export interface PhoneRules {
+  /** WPE 下发的条数 */
+  total: number
+  /** 手机上能用的条数 */
+  kept: number
+  /** 被跳过的条数（进程名规则、内核不支持的类型等） */
+  skipped: number
+  /** 能用的里面动作是走代理的条数 */
+  proxy: number
+}
+
+export interface ServerDelay {
+  serverId: string
+  /** TCP 连接耗时 ms，-1 = 不通 */
+  delay: number
 }
 
 export interface NoticeInfo {
@@ -116,6 +135,8 @@ export const api = {
   setAppProxy: (mode: AppProxy['mode'], packages: string[]) => call<boolean>('setAppProxy', { mode, packages }),
   /** 打开系统的「忽略电池优化」请求；返回之后再调 getPlatformInfo 看结果 */
   requestIgnoreBattery: () => call<boolean>('requestIgnoreBattery'),
+  /** 并行测各节点的 TCP 延迟（每个最多等 3 秒） */
+  testServerDelays: () => call<ServerDelay[]>('testServerDelays'),
 }
 
 export interface PlatformInfo {
