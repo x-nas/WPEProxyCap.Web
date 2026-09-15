@@ -46,8 +46,6 @@ type Tab = 'boost' | 'nodes' | 'inbox' | 'me'
 const state = ref<AppState | null>(null)
 const servers = ref<ServerInfo[]>([])
 const notices = ref<NoticeInfo[]>([])
-const wpeStatus = ref('')
-const subDelay = ref(-1)
 const connected = ref(false)
 const stats = ref<LiveStats | null>(null)
 const logs = ref<LogItem[]>([])
@@ -89,16 +87,6 @@ provide(LOGIN, form)
 
 const offs: Array<() => void> = []
 
-/* ⚠️ 映射表必须覆盖每一个取值（与 App.vue 同一张），第五种「还没测出来」走 checking */
-const NET: Record<string, { k: Key; c: string }> = {
-  online: { k: 'win.net.online', c: 'g' },
-  slow: { k: 'win.net.slow', c: 'a' },
-  lag: { k: 'win.net.lag', c: 'o' },
-  offline: { k: 'win.net.offline', c: 'm' },
-}
-
-const net = computed(() => NET[wpeStatus.value] ?? { k: 'win.net.checking' as Key, c: 'm' })
-
 const unread = computed(() => {
   void readKeys.value
   return unreadCount(notices.value)
@@ -128,8 +116,7 @@ async function testDelays(): Promise<void> {
 
 async function refreshNetwork(): Promise<void> {
   try {
-    wpeStatus.value = await api.checkWpeServer()
-    subDelay.value = await api.checkSubscriberServer()
+    // 订阅服务器状态 / 延迟原来只给「我的」页的订阅信息组用，2026-09-15 那组去掉后不再探测
     servers.value = await api.getServers()
     notices.value = await api.getNotices()
   } catch (e) {
@@ -295,11 +282,10 @@ const TABS: Array<{ id: Tab; k: Key; d: string }> = [
 
           <MeTab
             v-show="tab === 'me'"
-            :state="state" :servers="servers" :platform="platform" :app-proxy="appProxy"
-            :net-text="t(net.k)" :net-tone="net.c" :sub-delay="subDelay"
+            :state="state" :platform="platform" :app-proxy="appProxy"
             @account="accountSheet = true" @subscribe="subscribeSheet = true" @apps="appsOpen = true"
             @battery="fixBattery" @log="logOpen = true" @agreement="openAgreement"
-            @tutorial="open(site('tutorial.html#wpc-android'))" @open="open" />
+            @tutorial="open(site('tutorial.html#wpc-android'))" />
         </main>
 
         <nav class="nav" :aria-label="t('mob.tabBoost')">

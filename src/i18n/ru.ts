@@ -193,10 +193,7 @@ export const ru: Record<Key, string> = {
   'mob.appsNext': 'Сохранено. Переподключитесь, чтобы применить',
   'mob.battery': 'Фоновая работа',
   'mob.batteryLimited': 'Ограничена',
-  'mob.batteryOk': 'Разрешена',
-  'mob.batteryDesc': 'Для приложения включена оптимизация батареи: при выключенном экране соединение может обрываться. Разрешите фоновую работу.',
   'mob.vpnDenied': 'Нет разрешения VPN — подключение невозможно',
-  'mob.source': 'Исходный код',
 
   // ── 手机版 2.0（2026-09-15）
   'mob.tabBoost': 'Ускорение',
@@ -237,10 +234,6 @@ export const ru: Record<Key, string> = {
   'mob.back': 'Назад',
   'mob.pickNotice': 'Выберите сообщение, чтобы прочитать его',
   'mob.meNotSigned': 'Вход не выполнен',
-  'mob.grpSub': 'Подписка',
-  'mob.grpRun': 'Работа',
-  'mob.grpHelp': 'Справка',
-  'mob.nodeCount': 'Узлов',
   'mob.theme': 'Тема',
   'mob.kernel': 'Ядро',
   'mob.version': 'Версия',

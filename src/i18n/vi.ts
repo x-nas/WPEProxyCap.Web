@@ -192,10 +192,7 @@ export const vi: Record<Key, string> = {
   'mob.appsNext': 'Đã lưu. Kết nối lại để áp dụng',
   'mob.battery': 'Chạy nền',
   'mob.batteryLimited': 'Bị hạn chế',
-  'mob.batteryOk': 'Đã cho phép',
-  'mob.batteryDesc': 'Ứng dụng đang bị tối ưu pin nên kết nối có thể ngắt khi tắt màn hình lâu. Hãy cho phép chạy nền.',
   'mob.vpnDenied': 'Chưa cấp quyền VPN nên không thể kết nối',
-  'mob.source': 'Mã nguồn',
 
   // ── 手机版 2.0（2026-09-15）
   'mob.tabBoost': 'Tăng tốc',
@@ -236,10 +233,6 @@ export const vi: Record<Key, string> = {
   'mob.back': 'Quay lại',
   'mob.pickNotice': 'Chọn một tin để xem nội dung',
   'mob.meNotSigned': 'Chưa đăng nhập',
-  'mob.grpSub': 'Đăng ký',
-  'mob.grpRun': 'Hoạt động',
-  'mob.grpHelp': 'Trợ giúp',
-  'mob.nodeCount': 'Số nút',
   'mob.theme': 'Giao diện',
   'mob.kernel': 'Lõi',
   'mob.version': 'Phiên bản',

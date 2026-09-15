@@ -189,10 +189,7 @@ export const ja: Record<Key, string> = {
   'mob.appsNext': '保存しました。再接続すると有効になります',
   'mob.battery': 'バックグラウンド',
   'mob.batteryLimited': '制限あり',
-  'mob.batteryOk': '許可済み',
-  'mob.batteryDesc': 'このアプリはバッテリー最適化の対象です。画面オフが続くと接続が切れることがあるため、バックグラウンド実行を許可してください。',
   'mob.vpnDenied': 'VPN の許可がないため接続できません',
-  'mob.source': 'ソースコード',
 
   // ── 手机版 2.0（2026-09-15）
   'mob.tabBoost': 'ブースト',
@@ -233,10 +230,6 @@ export const ja: Record<Key, string> = {
   'mob.back': '戻る',
   'mob.pickNotice': 'お知らせを選ぶと内容が表示されます',
   'mob.meNotSigned': '未ログイン',
-  'mob.grpSub': 'サブスクリプション',
-  'mob.grpRun': '動作',
-  'mob.grpHelp': 'ヘルプ',
-  'mob.nodeCount': 'ノード数',
   'mob.theme': 'テーマ',
   'mob.kernel': 'コア',
   'mob.version': 'バージョン',

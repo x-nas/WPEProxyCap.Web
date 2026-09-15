@@ -192,10 +192,7 @@ export const tw: Record<Key, string> = {
   'mob.appsNext': '已儲存，中斷後重新連線即可生效',
   'mob.battery': '背景執行',
   'mob.batteryLimited': '受系統限制',
-  'mob.batteryOk': '已允許',
-  'mob.batteryDesc': '系統正在對本應用程式做電池最佳化，鎖定螢幕一段時間後連線可能中斷，建議允許背景執行。',
   'mob.vpnDenied': '未授予 VPN 權限，無法連線',
-  'mob.source': '開放原始碼',
 
   // ── 手机版 2.0（2026-09-15）
   'mob.tabBoost': '加速',
@@ -236,10 +233,6 @@ export const tw: Record<Key, string> = {
   'mob.back': '返回',
   'mob.pickNotice': '選擇一則訊息查看詳情',
   'mob.meNotSigned': '未登入',
-  'mob.grpSub': '訂閱',
-  'mob.grpRun': '執行',
-  'mob.grpHelp': '說明',
-  'mob.nodeCount': '節點數',
   'mob.theme': '主題',
   'mob.kernel': '核心',
   'mob.version': '版本',

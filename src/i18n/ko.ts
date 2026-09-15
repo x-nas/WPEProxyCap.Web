@@ -189,10 +189,7 @@ export const ko: Record<Key, string> = {
   'mob.appsNext': '저장되었습니다. 다시 연결하면 적용됩니다',
   'mob.battery': '백그라운드',
   'mob.batteryLimited': '제한됨',
-  'mob.batteryOk': '허용됨',
-  'mob.batteryDesc': '이 앱에 배터리 최적화가 적용되어 화면이 꺼진 뒤 연결이 끊길 수 있습니다. 백그라운드 실행을 허용하세요.',
   'mob.vpnDenied': 'VPN 권한이 없어 연결할 수 없습니다',
-  'mob.source': '소스 코드',
 
   // ── 手机版 2.0（2026-09-15）
   'mob.tabBoost': '가속',
@@ -233,10 +230,6 @@ export const ko: Record<Key, string> = {
   'mob.back': '뒤로',
   'mob.pickNotice': '알림을 선택하면 내용이 표시됩니다',
   'mob.meNotSigned': '로그인 안 됨',
-  'mob.grpSub': '구독',
-  'mob.grpRun': '실행',
-  'mob.grpHelp': '도움말',
-  'mob.nodeCount': '노드 수',
   'mob.theme': '테마',
   'mob.kernel': '코어',
   'mob.version': '버전',

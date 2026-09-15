@@ -172,14 +172,15 @@ async function cut(): Promise<void> {
         <!-- ── 右栏：节点、读数、操作 ─────────── -->
         <section class="col">
           <template v-if="!connected">
+            <!-- 延迟挪到右侧与箭头同一行：原来独占一行，一屏放不下时这一行最不值 -->
             <button v-if="servers.length" class="m-card node" type="button" data-probe="nodes" @click="emit('nodes')">
               <span class="nm">
                 <span class="m-eb">{{ t('mob.curNode') }}</span>
                 <b>{{ selectedServer?.serverName || '—' }}</b>
-                <span class="lat">
-                  <LatencyBars :ms="selDelay" />
-                  <span :class="'m-' + latencyTone(selDelay)">{{ latText(selDelay) }}</span>
-                </span>
+              </span>
+              <span class="lat">
+                <LatencyBars :ms="selDelay" />
+                <span :class="'m-' + latencyTone(selDelay)">{{ latText(selDelay) }}</span>
               </span>
               <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
             </button>
@@ -201,15 +202,14 @@ async function cut(): Promise<void> {
               ⚠️ 没有节点就不显示（2026-09-15 用户要求）：先有节点才谈得上登录，找回密码 / 注册的地址也取自选中的节点。
             -->
             <div v-if="servers.length" class="m-card acc" data-probe="acc">
-              <label class="m-lbl" for="bt-user">{{ t('home.account') }}</label>
+              <!-- 不再单列标签（一屏放不下）：占位文字已经说明是账号 / 密码，读屏走 aria-label -->
               <div class="m-inp">
                 <input id="bt-user" ref="userInput" v-model="username" autocomplete="username" autocapitalize="off" spellcheck="false"
-                       enterkeyhint="next" :placeholder="t('home.accountPh')" :disabled="busy" @change="persistAccount" />
+                       enterkeyhint="next" :aria-label="t('home.account')" :placeholder="t('home.accountPh')" :disabled="busy" @change="persistAccount" />
               </div>
 
-              <label class="m-lbl" for="bt-pass">{{ t('home.password') }}</label>
               <div class="m-inp">
-                <input id="bt-pass" v-model="password" :type="showPwd ? 'text' : 'password'" autocomplete="current-password"
+                <input id="bt-pass" v-model="password" :type="showPwd ? 'text' : 'password'" autocomplete="current-password" :aria-label="t('home.password')"
                        enterkeyhint="go" :placeholder="t('home.passwordPh')" :disabled="busy" @change="persistAccount" @keyup.enter="engage" />
                 <button class="eye" type="button" :aria-label="t(showPwd ? 'mob.hidePwd' : 'mob.showPwd')" :aria-pressed="showPwd" @click="showPwd = !showPwd">
                   <!-- 密码藏着时画睁眼（点了显示），显示着时画划掉的眼（点了隐藏） -->
@@ -264,15 +264,7 @@ async function cut(): Promise<void> {
               </div>
             </div>
 
-            <div class="m-card">
-              <button class="m-row" type="button" @click="emit('apps')">
-                <svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" /></svg>
-                <span class="k">{{ t('mob.apps') }}</span>
-                <span class="v">{{ appsText }}</span>
-                <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
-              </button>
-            </div>
-
+            <!-- 已连接时不再放「分应用代理」一行（一屏放不下）：改了要重连才生效，入口在「我的」页 -->
             <div class="acts">
               <button class="m-btn cy" type="button" data-probe="verify" @click="emit('verify')">
                 <svg class="ico" viewBox="0 0 24 24"><path d="M12 3l8 3v6c0 4.4-3.3 8.2-8 9-4.7-.8-8-4.6-8-9V6z" /><path d="M9 12l2 2 4-4" /></svg>
@@ -307,15 +299,25 @@ async function cut(): Promise<void> {
 </template>
 
 <style scoped>
-.notes { display: flex; flex-direction: column; gap: 10px; margin-top: -6px; }
-.cols { display: flex; flex-direction: column; gap: 14px; }
-.col { min-width: 0; display: flex; flex-direction: column; gap: 14px; }
+/*
+  一屏放下（2026-09-15 用户要求：加速页尽量不要下拉滚动）。
+  外层定高 = 页面高度；核心那一栏吃掉剩下的高度、核心按它缩放，其余卡片按内容高 ——
+  屏幕矮时是核心变小，而不是整页出滚动条。核心最小 110px，再矮（横屏手机）才让外层撑出去整页滚动。
+  ⚠️ 核心栏不能写 min-height: 0：它的最小高度要由核心的 110px 撑住，否则会被压到卡片底下。
+*/
+.boost .m-wrap { height: 100%; gap: 8px; padding-bottom: 10px; }
+.notes { flex: none; display: flex; flex-direction: column; gap: 6px; margin-top: -4px; }
+.notes .m-strip { padding: 7px 12px; }
+.cols { flex: 1 1 auto; display: flex; flex-direction: column; gap: 8px; }
+.col { min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+/* 分应用代理那一行 52 → 44：矮屏上这 8px 换给核心 */
+.col .m-row { min-height: 44px; padding-top: 6px; padding-bottom: 6px; }
 
-.core-col { align-items: center; }
+.core-col { flex: 1 1 auto; align-items: center; gap: 4px; }
 
-.stage { width: 100%; height: min(74vw, 300px, 46vh); min-height: 200px; display: grid; place-items: center; }
-/* 未连接时核心小一档：下面还有节点卡和账号卡，第一屏要露得出账号框 */
-.stage.idle { height: min(58vw, 236px, 34vh); min-height: 170px; }
+.stage { flex: 1 1 auto; width: 100%; min-height: 110px; max-height: 300px; display: grid; place-items: center; }
+/* 未连接时核心上限小一档：下面还有节点卡和账号卡 */
+.stage.idle { max-height: 236px; }
 
 .engage { height: 100%; aspect-ratio: 1; max-width: 100%; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .engage:disabled { cursor: default; }
@@ -337,41 +339,46 @@ async function cut(): Promise<void> {
 .today b { font-weight: 500; color: var(--soft); font-variant-numeric: tabular-nums; }
 .today i { font-style: normal; color: var(--dim); }
 
-.node { width: 100%; display: flex; align-items: center; gap: 12px; padding: 14px 16px; color: var(--gray); font: inherit; text-align: left; cursor: pointer; }
-.node .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 3px; }
-.node b { font-weight: 500; font-size: var(--fs-lead); line-height: 1.4; overflow-wrap: anywhere; }
-.node .lat { display: flex; align-items: center; gap: 8px; font-family: var(--mono); font-size: var(--fs-small); color: var(--dim2); }
+.node { width: 100%; display: flex; align-items: center; gap: 10px; padding: 7px 14px; color: var(--gray); font: inherit; text-align: left; cursor: pointer; }
+.node .nm { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.node b { font-weight: 500; font-size: var(--fs-lead); line-height: 1.35; overflow-wrap: anywhere; }
+.node .lat { flex: none; display: flex; align-items: center; gap: 6px; font-family: var(--mono); font-size: var(--fs-small); color: var(--dim2); }
 .node .chev { width: 18px; height: 18px; flex: none; color: var(--dim); }
 
-.empty { padding: 22px 16px 16px; display: flex; flex-direction: column; align-items: center; gap: 12px; text-align: center; }
-.empty p { margin: 0 0 4px; line-height: 1.6; color: var(--soft); }
-.em-ic { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: rgb(var(--cyan-rgb) / 10%); color: var(--cyan); }
-.em-ic .ico { width: 26px; height: 26px; }
-.acc { padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 12px; }
-.acc .rem { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
-.acc .links { display: flex; justify-content: space-between; margin-top: -8px; border-top: 1px solid var(--border); }
+.empty { padding: 14px 14px 12px; display: flex; flex-direction: column; align-items: center; gap: 8px; text-align: center; }
+.empty p { margin: 0 0 2px; line-height: 1.5; color: var(--soft); }
+.em-ic { width: 42px; height: 42px; display: grid; place-items: center; border-radius: 50%; background: rgb(var(--cyan-rgb) / 10%); color: var(--cyan); }
+.em-ic .ico { width: 22px; height: 22px; }
+.acc { padding: 8px 14px 0; display: flex; flex-direction: column; gap: 6px; }
+.acc .m-inp { height: 42px; }
+.acc .rem { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 32px; }
+.acc .links { display: flex; justify-content: space-between; margin-top: -2px; border-top: 1px solid var(--border); }
+.acc .links .m-link { padding: 6px 2px; }
 
-.sub-go { flex: none; align-self: stretch; height: 52px; min-height: 52px; background: rgb(var(--cyan-rgb) / 12%); border-color: rgb(var(--cyan-rgb) / 55%); color: var(--cyan); font-size: var(--fs-lead); }
+.sub-go { flex: none; align-self: stretch; height: 48px; min-height: 48px; background: rgb(var(--cyan-rgb) / 12%); border-color: rgb(var(--cyan-rgb) / 55%); color: var(--cyan); font-size: var(--fs-lead); }
 
 .stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--m-radius); overflow: hidden; }
-.st { min-width: 0; display: flex; flex-direction: column; gap: 2px; padding: 12px 14px; background: var(--card); }
+.st { min-width: 0; display: flex; flex-direction: column; gap: 0; padding: 6px 12px; background: var(--card); }
 .sk { font-size: var(--fs-small); color: var(--muted); }
 .sv { font-family: var(--orbit); font-weight: 700; font-size: var(--fs-num); font-variant-numeric: tabular-nums; }
 .sv small { margin-left: 4px; font-family: var(--share); font-weight: 400; font-size: var(--fs-caption); letter-spacing: .08em; color: var(--muted); }
-.st :deep(.spark) { height: 30px; margin-top: 4px; }
+.st :deep(.spark) { height: 18px; margin-top: 2px; }
 
 .acts { display: flex; gap: 10px; }
 
 .sheet-tx { margin: 0; line-height: 1.7; color: var(--soft); }
 
 @media (min-width: 840px) {
+  /* 平板两栏：高度够，回到按内容排、整页可滚的老样子 */
+  .boost .m-wrap { height: auto; }
   .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 28px; }
-  .stage, .stage.idle { height: min(380px, 52vh); }
+  .stage, .stage.idle { flex: none; height: min(380px, 52vh); max-height: none; }
   .core-col { position: sticky; top: 0; }
 }
 
-/* 横屏手机：高度很矮，核心按高度收 */
+/* 横屏手机：高度很矮，一屏放不下，回到整页滚动，核心按高度收 */
 @media (max-height: 480px) {
-  .stage, .stage.idle { height: 62vh; min-height: 160px; }
+  .boost .m-wrap { height: auto; }
+  .stage, .stage.idle { flex: none; height: 62vh; min-height: 160px; max-height: none; }
 }
 </style>

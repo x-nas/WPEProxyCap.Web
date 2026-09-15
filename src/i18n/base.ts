@@ -213,10 +213,7 @@ export const DICT = {
   'mob.appsNext': { zh: '已保存，断开后重新连接即可生效', en: 'Saved. Reconnect to apply' },
   'mob.battery': { zh: '后台运行', en: 'Background' },
   'mob.batteryLimited': { zh: '受系统限制', en: 'Restricted' },
-  'mob.batteryOk': { zh: '已允许', en: 'Allowed' },
-  'mob.batteryDesc': { zh: '系统正在对本应用做电池优化，锁屏一段时间后连接可能被断开，建议允许后台运行。', en: 'Battery optimization is on for this app, so the connection may drop after the screen has been off for a while. Allow background running to avoid it.' },
   'mob.vpnDenied': { zh: '没有授予 VPN 权限，无法连接', en: 'VPN permission was not granted' },
-  'mob.source': { zh: '开源代码', en: 'Source code' },
 
   // ── 手机版 2.0（2026-09-15，四个标签 + 引导 + 我的）─────────
   'mob.tabBoost': { zh: '加速', en: 'Boost' },
@@ -257,10 +254,6 @@ export const DICT = {
   'mob.back': { zh: '返回', en: 'Back' },
   'mob.pickNotice': { zh: '选择一条消息查看详情', en: 'Choose a message to read it' },
   'mob.meNotSigned': { zh: '未登录', en: 'Not signed in' },
-  'mob.grpSub': { zh: '订阅', en: 'Subscription' },
-  'mob.grpRun': { zh: '运行', en: 'Running' },
-  'mob.grpHelp': { zh: '帮助', en: 'Help' },
-  'mob.nodeCount': { zh: '节点数', en: 'Nodes' },
   'mob.theme': { zh: '主题', en: 'Theme' },
   'mob.kernel': { zh: '内核', en: 'Core' },
   'mob.version': { zh: '版本', en: 'Version' },
