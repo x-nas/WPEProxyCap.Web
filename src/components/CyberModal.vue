@@ -32,6 +32,8 @@ const props = defineProps<{
   width?: number
   /** 内容区最大高度（px）。日志那种「行数多少都该一样高」的弹窗要定死它 */
   bodyHeight?: number
+  /** 整个弹窗的最大高度（CSS 值，如 '60vh'）。手机上的协议全文用它，免得占掉大半屏 */
+  maxHeight?: string
   /** 「保存」那颗按钮的文案。默认「保存」 */
   saveText?: string
   /** 「保存」点不点得动。⚠️ 与 busy 分开：busy 是「正在办」，这个是「还没得办」 */
@@ -102,7 +104,7 @@ const { covered } = useModal(() => props.open, close)
   -->
   <Teleport to="body"><div v-if="props.open" class="mask" :inert="covered" @click.self="onMask">
     <div ref="box" class="dlg" :class="{ ro: props.readonly, nofoot: !showFoot }" role="dialog" aria-modal="true"
-         :style="props.width ? { width: props.width + 'px' } : undefined" @keydown.esc="close">
+         :style="{ width: props.width ? props.width + 'px' : undefined, maxHeight: props.maxHeight }" @keydown.esc="close">
       <header class="hd">
         <span class="mk tl" /><span class="mk tr" />
         <div class="tt">

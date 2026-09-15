@@ -61,7 +61,7 @@
         var STATE = {
           version: '1.0',
           isConnected: view === 'cc',
-          // ?onboard=1 没有订阅号（引导第一步）；?onboard=2 有订阅号没账号（引导第二步）
+          // ?onboard=1 没有订阅号（引导，只填订阅号）；?onboard=2 有订阅号没账号（手机版加速页的账号卡是空的）
           subscriberName: empty || q.get('onboard') === '1' ? '' : 'WPC-2026-0912-DEMO',
           subscriberTime: empty ? null : '2026-09-12 08:40:11',
           selectedServerId: empty ? null : 's1',

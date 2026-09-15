@@ -9,6 +9,7 @@
   ⚠️ 用 <pre> 保住原文的缩进与空行：协议正文的排版本身是有意义的。
 */
 import { computed } from 'vue'
+import { isAndroid } from '../platform'
 import CyberModal from './CyberModal.vue'
 
 const props = defineProps<{ open: boolean; title: string; text: string }>()
@@ -29,6 +30,7 @@ const lines = computed(() =>
     subtitle="Legal"
     :width="680"
     :body-height="460"
+    :max-height="isAndroid ? '50vh' : undefined"
     readonly
     @update:open="emit('update:open', $event)"
   >

@@ -2,7 +2,8 @@
 /*
   「加速」页（手机版 2.0，方案 A）。
 
-  未连接：节点卡（点开节点弹层）→ 反应堆核心（它就是连接按钮）→ 分应用代理 / 账号两行。
+  未连接：反应堆核心（它就是连接按钮，未连接时缩小一档）→ 节点卡（点开节点弹层）→ 账号卡（账号 / 密码 / 记住我 /
+  找回密码 · 立即注册，2026-09-15 起从引导第二步挪到这里 —— 还没有账号的用户要能直接在主界面上注册）→ 分应用代理。
   已连接：计时 + 核心（点按暂停计时）→ 四格读数（上行 / 下行带曲线、延迟、内存）→ 安全验证 / 断开。
   两种状态下核心的位置不变。平板宽屏（≥ 840px）左边核心、右边卡片。
 
@@ -12,6 +13,7 @@
 import { computed, inject, ref } from 'vue'
 import type { AppProxy, AppState, LiveStats, PlatformInfo, ServerInfo } from '../../api'
 import { t, tf } from '../../i18n'
+import { pushToast } from '../../stores/toast'
 import ReactorCore from '../ReactorCore.vue'
 import Sparkline from '../Sparkline.vue'
 import { useControlPanel } from '../useControlPanel'
@@ -36,7 +38,6 @@ const props = defineProps<{
 const emit = defineEmits<{
   (e: 'nodes'): void
   (e: 'apps'): void
-  (e: 'account'): void
   (e: 'subscribe'): void
   (e: 'verify'): void
   (e: 'battery'): void
@@ -44,7 +45,28 @@ const emit = defineEmits<{
   (e: 'disconnected'): void
 }>()
 
-const { username, selectedServer, coreTone, busy, login } = inject(LOGIN)!
+const {
+  username, password, remember, selectedServer, coreTone, busy,
+  login, persistAccount, toggleRemember, openServerUrl,
+} = inject(LOGIN)!
+
+const showPwd = ref(false)
+const accErr = ref(false)
+const userInput = ref<HTMLInputElement | null>(null)
+const accMissing = computed(() => accErr.value && (!username.value.trim() || !password.value))
+
+/* 点核心连接：账号密码没填齐就提示并把焦点放进账号框，填齐了先落盘再连 */
+async function engage(): Promise<void> {
+  if (!username.value.trim() || !password.value) {
+    accErr.value = true
+    pushToast('warning', t('mob.accRequired'))
+    userInput.value?.focus()
+    return
+  }
+  accErr.value = false
+  persistAccount()
+  await login()
+}
 
 const {
   paused, pauseBusy, disconnectOpen, busy: cutBusy, upHist, downHist,
@@ -111,9 +133,9 @@ async function cut(): Promise<void> {
             <span class="where">{{ selectedServer?.serverName || '—' }} · <b :class="'m-' + delayTone">{{ delayText }}</b></span>
           </div>
 
-          <div class="stage">
+          <div class="stage" :class="{ idle: !connected }">
             <button v-if="!connected" class="engage" type="button" data-probe="connect" :disabled="busy || !servers.length"
-                    :aria-label="t('home.login')" @click="login">
+                    :aria-label="t('home.login')" @click="engage">
               <ReactorCore :tone="coreTone">
                 <template v-if="busy">
                   <span class="loader"><i /><i /><i /></span>
@@ -173,17 +195,44 @@ async function cut(): Promise<void> {
               </button>
             </div>
 
+            <!-- 账号卡：改动在失焦 / 切换开关时就落盘（与 Windows 主页同一种手感），连接前再确认一次 -->
+            <div class="m-card acc" data-probe="acc">
+              <label class="m-lbl" for="bt-user">{{ t('home.account') }}</label>
+              <div class="m-inp">
+                <input id="bt-user" ref="userInput" v-model="username" autocomplete="username" autocapitalize="off" spellcheck="false"
+                       enterkeyhint="next" :placeholder="t('home.accountPh')" :disabled="busy" @change="persistAccount" />
+              </div>
+
+              <label class="m-lbl" for="bt-pass">{{ t('home.password') }}</label>
+              <div class="m-inp">
+                <input id="bt-pass" v-model="password" :type="showPwd ? 'text' : 'password'" autocomplete="current-password"
+                       enterkeyhint="go" :placeholder="t('home.passwordPh')" :disabled="busy" @change="persistAccount" @keyup.enter="engage" />
+                <button class="eye" type="button" :aria-label="t(showPwd ? 'mob.hidePwd' : 'mob.showPwd')" :aria-pressed="showPwd" @click="showPwd = !showPwd">
+                  <!-- 密码藏着时画睁眼（点了显示），显示着时画划掉的眼（点了隐藏） -->
+                  <svg v-if="!showPwd" class="ico" viewBox="0 0 24 24"><path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z" /><circle cx="12" cy="12" r="3" /></svg>
+                  <svg v-else class="ico" viewBox="0 0 24 24"><path d="M3 3l18 18" /><path d="M10.6 5.1A10.4 10.4 0 0 1 12 5c6.4 0 10 7 10 7a17.7 17.7 0 0 1-3.2 4.2M6.6 6.6C3.9 8.3 2 12 2 12s3.6 7 10 7a9.7 9.7 0 0 0 5.4-1.6" /><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2" /></svg>
+                </button>
+              </div>
+
+              <p v-if="accMissing" class="m-err" role="alert">{{ t('mob.accRequired') }}</p>
+
+              <div class="rem">
+                <span id="bt-rem">{{ t('home.remember') }}</span>
+                <button class="m-switch" :class="{ on: remember }" type="button" role="switch" :aria-checked="remember" aria-labelledby="bt-rem"
+                        :disabled="busy" @click="toggleRemember" />
+              </div>
+
+              <div class="links">
+                <button class="m-link" type="button" data-probe="forgot" @click="openServerUrl(selectedServer?.forgotURL)">{{ t('home.forgot') }}</button>
+                <button class="m-link" type="button" data-probe="register" @click="openServerUrl(selectedServer?.registerURL)">{{ t('home.register') }}</button>
+              </div>
+            </div>
+
             <div class="m-card">
               <button class="m-row" type="button" data-probe="apps" @click="emit('apps')">
                 <svg class="ico" viewBox="0 0 24 24"><rect x="4" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5" /><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5" /><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5" /></svg>
                 <span class="k">{{ t('mob.apps') }}</span>
                 <span class="v">{{ appsText }}</span>
-                <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
-              </button>
-              <button class="m-row" type="button" data-probe="account" @click="emit('account')">
-                <svg class="ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4" /><path d="M4 21c1-4 4-6 8-6s7 2 8 6" /></svg>
-                <span class="k">{{ t('home.account') }}</span>
-                <span class="v mono">{{ username || t('mob.noAccount') }}</span>
                 <svg class="ico chev" viewBox="0 0 24 24"><path d="M9 6l6 6-6 6" /></svg>
               </button>
             </div>
@@ -261,6 +310,8 @@ async function cut(): Promise<void> {
 .core-col { align-items: center; }
 
 .stage { width: 100%; height: min(74vw, 300px, 46vh); min-height: 200px; display: grid; place-items: center; }
+/* 未连接时核心小一档：下面还有节点卡和账号卡，第一屏要露得出账号框 */
+.stage.idle { height: min(58vw, 236px, 34vh); min-height: 170px; }
 
 .engage { height: 100%; aspect-ratio: 1; max-width: 100%; padding: 0; border: 0; border-radius: 50%; background: transparent; color: inherit; cursor: pointer; }
 .engage:disabled { cursor: default; }
@@ -292,6 +343,10 @@ async function cut(): Promise<void> {
 .empty p { margin: 0 0 4px; line-height: 1.6; color: var(--soft); }
 .em-ic { width: 52px; height: 52px; display: grid; place-items: center; border-radius: 50%; background: rgb(var(--cyan-rgb) / 10%); color: var(--cyan); }
 .em-ic .ico { width: 26px; height: 26px; }
+.acc { padding: 14px 16px 4px; display: flex; flex-direction: column; gap: 12px; }
+.acc .rem { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 44px; }
+.acc .links { display: flex; justify-content: space-between; margin-top: -8px; border-top: 1px solid var(--border); }
+
 .sub-go { flex: none; align-self: stretch; height: 52px; min-height: 52px; background: rgb(var(--cyan-rgb) / 12%); border-color: rgb(var(--cyan-rgb) / 55%); color: var(--cyan); font-size: var(--fs-lead); }
 
 .stats { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1px; background: var(--border); border: 1px solid var(--border); border-radius: var(--m-radius); overflow: hidden; }
@@ -307,12 +362,12 @@ async function cut(): Promise<void> {
 
 @media (min-width: 840px) {
   .cols { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; gap: 28px; }
-  .stage { height: min(380px, 52vh); }
+  .stage, .stage.idle { height: min(380px, 52vh); }
   .core-col { position: sticky; top: 0; }
 }
 
 /* 横屏手机：高度很矮，核心按高度收 */
 @media (max-height: 480px) {
-  .stage { height: 62vh; min-height: 160px; }
+  .stage, .stage.idle { height: 62vh; min-height: 160px; }
 }
 </style>

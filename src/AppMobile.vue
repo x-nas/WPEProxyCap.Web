@@ -2,7 +2,7 @@
 /*
   手机版外壳（WPEProxyCap.Android）—— 2026-09-15 按「方案 A」整体重做。
 
-  结构：首次使用走引导（订阅号 → 账号），之后是四个标签：
+  结构：没有订阅号时走引导（只填订阅号；账号密码 2026-09-15 起在「加速」页上直接填），之后是四个标签：
     加速（节点卡 + 反应堆核心 / 已连接时的计时与读数）· 节点 · 消息 · 我的（方案 C 的分组设置）
   手机宽度（< 600px）标签栏在底部；平板与横屏（≥ 600px）变成左侧导航栏，各页在 ≥ 840px 时分两栏。
 
@@ -10,7 +10,7 @@
   控制中心逻辑 useControlPanel、系统日志 / 安全验证 / 协议 / 分应用代理几个弹窗、i18n、主题。
   不再共用：MainView / ControlCenter 的骨架与 home.css / control.css（电脑版的三舱布局）。
 
-  系统返回键（原生侧调 window.__wpcBack）：弹窗 / 弹层 → 页内层级（消息详情、引导第二步）
+  系统返回键（原生侧调 window.__wpcBack）：弹窗 / 弹层 → 页内层级（消息详情）
   → 回到「加速」页 → 都没有才交还系统（退到后台，VPN 在前台服务里继续跑）。
   状态栏、刘海、手势条的留白由原生侧按 WindowInsets 给 WebView 加内边距，这里不用 env(safe-area-inset-*)。
 */
@@ -104,10 +104,12 @@ const unread = computed(() => {
   return unreadCount(notices.value)
 })
 
-/* 没有订阅号或没有账号就先走引导；已经连着（「始终开启的 VPN」在后台连上的）不打断 */
+/*
+  没有订阅号就先走引导；已经连着（「始终开启的 VPN」在后台连上的）不打断。
+  ⚠️ 不再看账号：账号表单在「加速」页上，还没有账号的用户要能在主界面上找回密码 / 注册（2026-09-15 用户要求）。
+*/
 const onboarding = computed(() =>
-  inHost && loaded.value && !onboardDone.value && !connected.value &&
-  (!state.value?.subscriberName || !state.value?.userName))
+  inHost && loaded.value && !onboardDone.value && !connected.value && !state.value?.subscriberName)
 
 async function testDelays(): Promise<void> {
   if (!servers.value.length) { delays.value = {}; return }
@@ -280,7 +282,7 @@ const TABS: Array<{ id: Tab; k: Key; d: string }> = [
             v-show="tab === 'boost'"
             :state="state" :servers="servers" :delays="delays" :stats="stats" :connected="connected"
             :platform="platform" :app-proxy="appProxy" :refresh="refreshAll"
-            @nodes="nodeSheet = true" @apps="appsOpen = true" @account="accountSheet = true"
+            @nodes="nodeSheet = true" @apps="appsOpen = true"
             @subscribe="subscribeSheet = true" @verify="verifyOpen = true" @battery="fixBattery"
             @rules-help="open(site('tutorial.html#m-rules'))" @disconnected="onDisconnected" />
 
